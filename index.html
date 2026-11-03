@@ -98,7 +98,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .seg{display:flex;background:var(--hover);border-radius:12px;padding:3px;margin:4px 0 12px}
 .seg button{flex:1;border:0;background:none;padding:8px;border-radius:10px;cursor:pointer;font-weight:600;font-size:14px;color:var(--muted)}
 .seg button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:8px}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin-bottom:8px;max-height:46vh;overflow:auto;padding:3px}
 .thc{border:2px solid var(--line);background:var(--panel);border-radius:16px;padding:10px 8px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;font-weight:600;font-size:14px;transition:transform .1s,border-color .15s}
 .thc:hover{transform:translateY(-1px)}
 .thc.on{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
@@ -108,7 +108,26 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 #ghost{position:fixed;z-index:50;pointer-events:none;background:var(--accent);color:#fff;padding:7px 13px;border-radius:12px;font-size:14px;display:none;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.94;box-shadow:var(--shadow)}
 #toast{position:fixed;left:50%;top:calc(68px + env(safe-area-inset-top));transform:translateX(-50%) translateY(-6px);background:#1f2937;color:#fff;padding:10px 14px 10px 16px;border-radius:14px;font-size:14px;z-index:70;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:92vw;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
 #toast.show{opacity:.97;transform:translateX(-50%)}
-@media (max-width:440px){.logo{display:none}.tb{min-width:41px;font-size:10px;padding:6px 2px 4px}#bar{gap:0}#zoom{bottom:calc(84px + env(safe-area-inset-bottom));right:8px}}
+#notePanel{position:fixed;right:12px;top:calc(68px + env(safe-area-inset-top));width:330px;max-height:calc(100vh - 190px);background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);z-index:12;display:none;flex-direction:column;padding:12px 14px 14px;gap:8px}
+#notePanel.show{display:flex;animation:pop .15s ease-out}
+.np-h{display:flex;align-items:center;gap:8px}
+.np-dot{width:12px;height:12px;border-radius:50%;flex:none}
+#npTitle{flex:1;min-width:0;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#notePanel .ib{width:34px;height:34px;color:var(--muted)}
+#npText{flex:1;min-height:150px;border:1px solid var(--line);border-radius:14px;padding:11px 12px;background:var(--bg);font-size:15px;line-height:1.6;resize:none;outline:none}
+#npText:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.np-meta{font-size:12.5px;color:var(--muted);line-height:1.7;display:flex;gap:14px;flex-wrap:wrap}
+.np-meta b{font-weight:600;color:var(--fg)}
+@media (max-width:640px){#notePanel{left:8px;right:8px;width:auto;top:auto;bottom:calc(84px + env(safe-area-inset-bottom));max-height:46vh}#npText{min-height:110px}}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 10px;cursor:pointer}
+.rv{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow:auto}
+.rvi{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:9px 12px;cursor:pointer;display:block;width:100%}
+.rvi:hover{background:var(--hover)}
+.rvi .rvt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;margin-right:8px}
+.rvi b{font-weight:650}
+.rvi small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.rvi p{margin:5px 0 0;font-size:13.5px;line-height:1.5;color:var(--fg);background:color-mix(in srgb,#f59e0b 12%,transparent);border-radius:9px;padding:6px 9px;white-space:pre-wrap}
+@media (max-width:440px){.logo{display:none}.tb{min-width:38px;font-size:10px;padding:6px 1px 4px}#bar{gap:0}#zoom{bottom:calc(84px + env(safe-area-inset-bottom));right:8px}}
 #toast button{border:0;background:rgba(255,255,255,.16);color:#fff;font-weight:700;border-radius:9px;padding:5px 11px;cursor:pointer;pointer-events:auto}
 </style>
 </head>
@@ -134,29 +153,38 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
   <button id="newmap">＋ 新增心智圖</button>
   <div id="dlist"></div>
 </aside>
+<aside id="notePanel" data-id=""><div class="np-h"><span class="np-dot"></span><b id="npTitle"></b><button class="ib" id="npClose" title="關閉"></button></div>
+<textarea id="npText" placeholder="寫下註記：想法、補充說明、日後的回饋…"></textarea><div class="np-meta" id="npMeta"></div></aside>
 <div id="ghost"></div>
 <div id="toast"></div>
 
 <script>
 'use strict';
-const VERSION='v1.3.0';
+const VERSION='v1.4.0';
 const $=s=>document.querySelector(s);
 const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
 
 /* ---------- color themes ---------- */
 const THEMES={
-  vivid:  {name:'繽紛', root:'#1e293b',levels:['#2563eb','#16a34a','#ea580c','#9333ea','#0891b2','#db2777'],branch:['#ea580c','#2563eb','#16a34a','#9333ea','#dc2626','#0891b2','#d97706','#db2777']},
-  ocean:  {name:'海洋', root:'#0c4a6e',levels:['#0369a1','#0891b2','#0d9488','#4f46e5','#2563eb','#0e7490']},
-  forest: {name:'森林', root:'#14532d',levels:['#15803d','#65a30d','#b45309','#0f766e','#4d7c0f','#a16207']},
-  sunset: {name:'夕陽', root:'#7c2d12',levels:['#ea580c','#e11d48','#d97706','#c026d3','#dc2626','#b45309']},
-  candy:  {name:'糖果', root:'#be185d',levels:['#ec4899','#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444']},
-  morandi:{name:'莫蘭迪',root:'#57534e',levels:['#7d8f7f','#b08b7e','#7f8ea8','#a8956b','#957d9c','#6f9a98']},
+  vivid:  {name:'繽紛', root:'#312e81',levels:['#2563eb','#10b981','#f97316','#a855f7','#06b6d4','#ec4899'],branch:['#f43f5e','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899']},
+  rainbow:{name:'彩虹', root:'#111827',levels:['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6'],branch:['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899']},
+  neon:   {name:'霓虹', root:'#0f0f23',levels:['#ff007f','#00b8ff','#00d26a','#ffab00','#d500f9','#ff3d00']},
+  galaxy: {name:'星空', root:'#1e1b4b',levels:['#6366f1','#a855f7','#ec4899','#06b6d4','#8b5cf6','#3b82f6']},
+  ocean:  {name:'海洋', root:'#075985',levels:['#0284c7','#06b6d4','#14b8a6','#6366f1','#3b82f6','#0ea5e9']},
+  tropical:{name:'熱帶',root:'#0f766e',levels:['#14b8a6','#f97316','#facc15','#ec4899','#22c55e','#06b6d4']},
+  mint:   {name:'薄荷', root:'#065f46',levels:['#10b981','#06b6d4','#22c55e','#0ea5e9','#14b8a6','#84cc16']},
+  forest: {name:'森林', root:'#14532d',levels:['#16a34a','#84cc16','#f59e0b','#0d9488','#65a30d','#ea580c']},
+  sunset: {name:'夕陽', root:'#9a3412',levels:['#f97316','#f43f5e','#f59e0b','#d946ef','#ef4444','#fb923c']},
+  autumn: {name:'秋楓', root:'#7c2d12',levels:['#dc2626','#ea580c','#d97706','#be123c','#ca8a04','#b45309']},
+  berry:  {name:'莓果', root:'#701a75',levels:['#c026d3','#e11d48','#7c3aed','#db2777','#9333ea','#f43f5e']},
+  candy:  {name:'糖果', root:'#db2777',levels:['#f472b6','#a78bfa','#60a5fa','#34d399','#fbbf24','#fb7185']},
+  morandi:{name:'莫蘭迪',root:'#57534e',levels:['#6f9a7a','#c08672','#6f87b5','#b8995a','#9a78a8','#5f9f9b']},
   mono:   {name:'簡約', root:'#111827',levels:['#374151','#6b7280','#4b5563','#9ca3af','#1f2937','#6b7280']}
 };
 const PALETTE=['#e8590c','#1971c2','#2f9e44','#9c36b5','#e03131','#0c8599','#f08c00','#c2255c'];
 const UI={
-  light:{fg:'#1f2937',nodeFill:'#ffffff',sel:'#2563eb',tint:.1,shadow:.13,rootStroke:'none'},
-  dark:{fg:'#e5e7eb',nodeFill:'#1a1f26',sel:'#60a5fa',tint:.2,shadow:.55,rootStroke:'rgba(255,255,255,.22)'}
+  light:{fg:'#1f2937',nodeFill:'#ffffff',sel:'#2563eb',tint:.14,muted:'#8b95a5',shadow:.13,rootStroke:'none'},
+  dark:{fg:'#e5e7eb',nodeFill:'#1a1f26',sel:'#60a5fa',tint:.24,muted:'#7c8796',shadow:.55,rootStroke:'rgba(255,255,255,.22)'}
 };
 const mq=matchMedia('(prefers-color-scheme: dark)');
 const ui=()=>mq.matches?UI.dark:UI.light;
@@ -182,13 +210,14 @@ const IC={
   del:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/>',
   copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
   close:'<path d="M6 6l12 12M18 6 6 18"/>',
+  note:'<path d="M5 3.5h14v12.5l-4.5 4.5H5Z"/><path d="M14.5 21v-5h4.5M8.5 8.5h7M8.5 12.5h4.5"/>',
   cloud:'<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.9 10.5 3.75 3.75 0 0 1 17.25 18Z"/>'
 };
 IC.cloudOk=IC.cloud+'<path d="m9.5 13.8 1.9 1.9 3.6-3.6"/>';
 IC.cloudSync=IC.cloud+'<path d="M12 11.5v4.5M10 14l2 2 2-2"/>';
 IC.cloudOff=IC.cloud+'<path d="M3 3l18 18"/>';
 const icon=n=>`<svg class="i" viewBox="0 0 24 24">${IC[n]}</svg>`;
-[['#bDrawer','menu'],['#bUndo','undo'],['#bRedo','redo'],['#bTheme','color'],['#bMore','more'],['#bCloseDrawer','close'],['#zIn','zin'],['#zOut','zout'],['#zFit','fit']].forEach(([s,n])=>$(s).innerHTML=icon(n));
+[['#bDrawer','menu'],['#bUndo','undo'],['#bRedo','redo'],['#bTheme','color'],['#bMore','more'],['#bCloseDrawer','close'],['#zIn','zin'],['#zOut','zout'],['#zFit','fit'],['#npClose','close']].forEach(([s,n])=>$(s).innerHTML=icon(n));
 
 /* ---------- helpers ---------- */
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
@@ -197,9 +226,11 @@ const strip=(k,v)=>k&&k[0]==='_'?undefined:v;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const oneLine=s=>String(s||'').replace(/\s*\n\s*/g,' ').trim();
 const count=n=>1+n.children.reduce((a,c)=>a+count(c),0);
-const mk=(text,...kids)=>({id:uid(),text,children:kids,collapsed:false,color:null});
+const mk=(text,...kids)=>({id:uid(),text,children:kids,collapsed:false,color:null,created:Date.now()});
 const isHex=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c);
 const validId=id=>typeof id==='string'&&/^[\w-]{1,60}$/.test(id);
+function fmtFull(t){if(!t)return '—';const d=new Date(t),p=x=>String(x).padStart(2,'0');return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`}
+function fmtShort(t){if(!t)return '';const d=new Date(t),p=x=>String(x).padStart(2,'0');return d.getFullYear()===new Date().getFullYear()?`${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`:`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`}
 function fmtDate(t){if(!t)return'';const d=new Date(t),p=x=>String(x).padStart(2,'0');return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`}
 let toastT;
 function toast(m,action){
@@ -223,12 +254,14 @@ async function saveFile(name,blob){
 function balanceSides(R){let l=0,r=0;for(const c of R.children){const w=count(c);if(r<=l){c.side='r';r+=w}else{c.side='l';l+=w}}}
 const defTheme=()=>THEMES[LS.get('mm.theme','vivid')]?LS.get('mm.theme','vivid'):'vivid';
 function sampleMap(){
-  const root=mk('心智圖使用說明',
+  const root=Object.assign(mk('心智圖使用說明',
     mk('新增主題',mk('點一下主題，再按藍色 ＋'),mk('鍵盤：Tab 子主題、Enter 同層')),
     mk('編輯文字',mk('點兩下主題就能修改'),mk('Shift + Enter 可以換行')),
     mk('刪除與整理',mk('選取後按紅色 × 刪除'),mk('拖到另一個主題上＝搬過去'),mk('摺疊分支，畫面更清爽')),
     mk('外觀',mk('右上角調色盤換顏色主題'),mk('依層級或依分支上色')),
-    mk('儲存與同步',mk('手機、電腦自動同步'),mk('匯出圖片 PNG'),mk('貼上大綱文字自動產生')));
+    mk('儲存與同步',mk('手機、電腦自動同步'),mk('匯出圖片 PNG'),mk('貼上大綱文字自動產生'))),
+    {note:'這是「註記」：可以寫下想法、補充說明或日後的回饋。\n按主題角落的黃色小圖示，或下方的「註記」按鈕就能打開。'});
+  root.children[2].children.push(mk('每個主題可加註記，會記錄建立時間'));
   balanceSides(root);
   return {id:uid(),root,layout:'both',colorMode:'level',theme:defTheme(),updated:Date.now(),sample:true};
 }
@@ -237,6 +270,10 @@ function san(n,d=0,keep=false){
   if(d>60||!n||typeof n!=='object')return mk('');
   const o={id:keep&&validId(n.id)?n.id:uid(),text:String(n.text??'').slice(0,2000),
     children:Array.isArray(n.children)?n.children.map(c=>san(c,d+1,keep)):[],collapsed:!!n.collapsed,color:isHex(n.color)?n.color:null};
+  if(typeof n.note==='string'&&n.note.trim())o.note=n.note.slice(0,10000);
+  const ts=v=>{v=Number(v);return v>1e12&&v<4e12?v:null};
+  o.created=ts(n.created)||(keep?null:Date.now());if(!o.created)delete o.created;
+  if(ts(n.edited))o.edited=ts(n.edited);
   if(n.side==='l'||n.side==='r')o.side=n.side;return o;
 }
 const cleanMeta=m=>({layout:m.layout==='right'?'right':'both',colorMode:m.colorMode==='branch'?'branch':'level',theme:THEMES[m.theme]?m.theme:'vivid'});
@@ -489,7 +526,8 @@ function wrap(text,s){
   }
   return out;
 }
-const gapY=d=>d<=1?30:14;
+let showTime=!!LS.get('mm.showTime',false);
+const gapY=d=>(d<=1?30:14)+(showTime?14:0);
 const cmode=()=>map.colorMode==='branch'?'branch':'level';
 const sideOf=c=>map.layout==='right'||c.side!=='l'?'r':'l';
 function layout(){
@@ -526,7 +564,7 @@ function bounds(){
   for(const n of visible()){
     const extra=n.collapsed&&n.children.length?26:0;
     x0=Math.min(x0,n._x-n._w/2-(n._dir<0?extra:0));x1=Math.max(x1,n._x+n._w/2+(n._dir>0?extra:0));
-    y0=Math.min(y0,n._y-n._h/2);y1=Math.max(y1,n._y+n._h/2);
+    y0=Math.min(y0,n._y-n._h/2-(n.note?6:0));y1=Math.max(y1,n._y+n._h/2+(showTime?16:0));
   }
   return {x:x0,y:y0,w:x1-x0,h:y1-y0};
 }
@@ -536,16 +574,17 @@ function drawSVG(U,exp){
   const R=map.root,vis=visible(),rootFill=R._col;let E='',N='';
   const defs=`<defs><filter id="sh" x="-20%" y="-30%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="3.2" flood-color="#0f172a" flood-opacity="${U.shadow}"/></filter>
 <filter id="sh2" x="-20%" y="-40%" width="140%" height="200%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="${rootFill}" flood-opacity=".35"/></filter>
+${[...new Set(vis.filter(n=>n._depth===1).map(n=>n._col))].map(c=>`<linearGradient id="lg${c.slice(1)}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(c,'#ffffff',.16)}"/><stop offset="1" stop-color="${c}"/></linearGradient>`).join('')}
 <linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(rootFill,'#ffffff',.18)}"/><stop offset="1" stop-color="${rootFill}"/></linearGradient></defs>`;
   for(const n of vis){
     if(n===R)continue;
     const p=parentOf[n.id],d=n._dir,y1=p._y,x2=n._x-d*n._w/2,y2=n._y;
     if(p===R){
       const xs=p._x+d*(p._w/2-12),xe=x2+d*2,mx=(p._x+d*p._w/2+xe)/2,w0=8,w1=2.6;
-      E+=`<path d="M${xs},${y1-w0/2}C${mx},${y1-w0/2} ${mx},${y2-w1/2} ${xe},${y2-w1/2}L${xe},${y2+w1/2}C${mx},${y2+w1/2} ${mx},${y1+w0/2} ${xs},${y1+w0/2}Z" fill="${n._col}" fill-opacity=".92"/>`;
+      E+=`<path d="M${xs},${y1-w0/2}C${mx},${y1-w0/2} ${mx},${y2-w1/2} ${xe},${y2-w1/2}L${xe},${y2+w1/2}C${mx},${y2+w1/2} ${mx},${y1+w0/2} ${xs},${y1+w0/2}Z" fill="${n._col}"/>`;
     }else{
       const x1=p._x+d*p._w/2,mx=(x1+x2)/2;
-      E+=`<path d="M${x1},${y1}C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" stroke="${n._col}" stroke-width="${n._depth===2?2.4:1.8}" stroke-linecap="round" stroke-opacity=".9"/>`;
+      E+=`<path d="M${x1},${y1}C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" stroke="${n._col}" stroke-width="${n._depth===2?2.6:2}" stroke-linecap="round"/>`;
     }
   }
   for(const n of vis){
@@ -559,16 +598,20 @@ function drawSVG(U,exp){
       g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="url(#rg)" stroke="${U.rootStroke}" stroke-width="1.5" filter="url(#sh2)"/>`;
     }else if(n._depth===1){
       tc=textOn(n._col);
-      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${n._col}" filter="url(#sh)"/>`;
-      g+=`<rect x="${x0+1.5}" y="${y0+1}" width="${n._w-3}" height="${n._h/2}" rx="${rx-1}" fill="#ffffff" fill-opacity=".1"/>`;
+      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="url(#lg${n._col.slice(1)})" filter="url(#sh)"/>`;
     }else{
       tc=U.fg;
-      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${U.nodeFill}" stroke="${n._col}" stroke-width="1.6" filter="url(#sh)"/>`;
+      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${U.nodeFill}" stroke="${n._col}" stroke-width="2" filter="url(#sh)"/>`;
       g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${n._col}" fill-opacity="${U.tint}"/>`;
     }
     const lh=s.fs*1.32,top=n._y-(n._lines.length-1)*lh/2+s.fs*0.36;
     g+=`<text font-family='${FONT}' font-size="${s.fs}" font-weight="${s.fw}" fill="${tc}" text-anchor="middle">`+
       n._lines.map((l,i)=>`<tspan x="${n._x}" y="${top+i*lh}">${esc(l)}</tspan>`).join('')+'</text></g>';
+    if(showTime&&n.created)g+=`<text x="${n._x}" y="${n._y+n._h/2+13}" font-family='${FONT}' font-size="10.5" fill="${U.muted}" text-anchor="middle">${fmtShort(n.created)}</text>`;
+    if(n.note){
+      const bx=n===R?x0+8:n._x-n._dir*(n._w/2-8),by=y0+1;
+      g+=`<g class="node" data-note="${n.id}"><title>${esc(n.note.slice(0,200))}</title><circle cx="${bx}" cy="${by}" r="13" fill="transparent"/><circle cx="${bx}" cy="${by}" r="8" fill="#f59e0b" stroke="${U.nodeFill}" stroke-width="1.6"/><path d="M${bx-3.4},${by-2.3}h6.8M${bx-3.4},${by+.2}h6.8M${bx-3.4},${by+2.7}h4.2" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></g>`;
+    }
     if(n!==R&&n.children.length&&n.collapsed){
       const tx=n._x+n._dir*(n._w/2+13);
       g+=`<g class="node" data-toggle="${n.id}"><circle cx="${tx}" cy="${n._y}" r="12" fill="${U.nodeFill}" stroke="${n._col}" stroke-width="1.8" filter="url(#sh)"/><text x="${tx}" y="${n._y+3.8}" font-family='${FONT}' font-size="10.5" font-weight="800" fill="${n._col}" text-anchor="middle">${count(n)-1}</text></g>`;
@@ -579,9 +622,9 @@ function drawSVG(U,exp){
 }
 function handles(U){
   const n=byId[sel];if(!n||editing||n._x==null)return '';
-  const r=clamp(13/view.k,11,32),out=[];
-  const plus=(cx,cy,kind,tip)=>`<g class="hdl" data-add="${kind}"><title>${tip}</title><circle cx="${cx}" cy="${cy}" r="${r*1.5}" fill="transparent"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${U.sel}" stroke="${U.nodeFill}" stroke-width="${r*.16}" filter="url(#sh)"/><path d="M${cx-r*.45},${cy}h${r*.9}M${cx},${cy-r*.45}v${r*.9}" stroke="#fff" stroke-width="${r*.18}" stroke-linecap="round"/></g>`;
-  const del=(cx,cy)=>{const q=r*.82;return `<g class="hdl" data-add="del"><title>刪除這個主題</title><circle cx="${cx}" cy="${cy}" r="${q*1.5}" fill="transparent"/><circle cx="${cx}" cy="${cy}" r="${q}" fill="#ef4444" stroke="${U.nodeFill}" stroke-width="${q*.16}" filter="url(#sh)"/><path d="M${cx-q*.36},${cy-q*.36}l${q*.72},${q*.72}M${cx+q*.36},${cy-q*.36}l${-q*.72},${q*.72}" stroke="#fff" stroke-width="${q*.2}" stroke-linecap="round"/></g>`};
+  const r=clamp(n._h*.3,9,13),out=[];
+  const plus=(cx,cy,kind,tip)=>`<g class="hdl" data-add="${kind}"><title>${tip}</title><circle cx="${cx}" cy="${cy}" r="${r*1.9}" fill="transparent"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${U.sel}" stroke="${U.nodeFill}" stroke-width="${r*.16}" filter="url(#sh)"/><path d="M${cx-r*.45},${cy}h${r*.9}M${cx},${cy-r*.45}v${r*.9}" stroke="#fff" stroke-width="${r*.18}" stroke-linecap="round"/></g>`;
+  const del=(cx,cy)=>{const q=r*.82;return `<g class="hdl" data-add="del"><title>刪除這個主題</title><circle cx="${cx}" cy="${cy}" r="${q*1.9}" fill="transparent"/><circle cx="${cx}" cy="${cy}" r="${q}" fill="#ef4444" stroke="${U.nodeFill}" stroke-width="${q*.16}" filter="url(#sh)"/><path d="M${cx-q*.36},${cy-q*.36}l${q*.72},${q*.72}M${cx+q*.36},${cy-q*.36}l${-q*.72},${q*.72}" stroke="#fff" stroke-width="${q*.2}" stroke-linecap="round"/></g>`};
   if(n===map.root){
     out.push(plus(n._x+n._w/2+r*.5,n._y,'r','新增子主題'));
     if(map.layout!=='right')out.push(plus(n._x-n._w/2-r*.5,n._y,'l','新增子主題'));
@@ -593,19 +636,17 @@ function handles(U){
   return out.join('');
 }
 const svg=$('#svg'),stage=$('#stage');
-let lastK=1,hT;
 function applyView(){
   const vp=$('#vp');if(vp)vp.setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k})`);
   const g=24*view.k;stage.style.backgroundSize=`${g}px ${g}px`;stage.style.backgroundPosition=`${view.x}px ${view.y}px`;
   $('#zPct').textContent=Math.round(view.k*100)+'%';
   posEditor();
-  if(sel&&view.k!==lastK){clearTimeout(hT);hT=setTimeout(()=>{if(sel&&!editing&&!gest&&view.k!==lastK)render()},160)}
 }
 function render(){
   layout();
   if(sel&&!byId[sel])sel=map.root.id;
-  lastK=view.k;svg.innerHTML=`<g id="vp">${drawSVG(ui(),false)}</g>`;
-  applyView();updateBar();
+  svg.innerHTML=`<g id="vp">${drawSVG(ui(),false)}</g>`;
+  applyView();updateBar();fillNote();
   if(document.activeElement!==$('#title'))$('#title').value=oneLine(map.root.text);
   $('#bUndo').disabled=!undoS.length;$('#bRedo').disabled=!redoS.length;
 }
@@ -653,7 +694,7 @@ function finishEdit(cancel){
     if(e.isNew&&!e.orig){restore(undoS.pop());sel=parentOf[e.id]?.id||map.root.id;changed();return}
     n.text=e.orig;render();return;
   }
-  n.text=txt;
+  n.text=txt;if(txt!==e.orig)n.edited=Date.now();
   if(!e.isNew&&txt!==e.orig){undoS.push(e.snap);redoS=[]}
   changed();ensureVisible(e.id);
 }
@@ -718,17 +759,17 @@ function nav(key){
 }
 function act(a){
   if(!byId[sel]){if(a==='child'||a==='sib')sel=map.root.id;else return}
-  ({child:()=>addChild(),sib:addSibling,edit:()=>edit(sel),color:openColor,up:()=>moveSib(-1),down:()=>moveSib(1),fold:()=>toggleCollapse(sel),del:delNode})[a]?.();
+  ({child:()=>addChild(),sib:addSibling,edit:()=>edit(sel),note:()=>{noteOpen&&$('#notePanel').dataset.id===sel?closeNote():openNote(sel)},color:openColor,up:()=>moveSib(-1),down:()=>moveSib(1),fold:()=>toggleCollapse(sel),del:delNode})[a]?.();
 }
 
 /* ---------- toolbar ---------- */
-const BAR=[['child','子主題'],['sib','同層'],['edit','編輯'],['color','顏色'],['up','上移'],['down','下移'],['fold','摺疊'],['del','刪除']];
+const BAR=[['child','子主題'],['sib','同層'],['edit','編輯'],['note','註記'],['color','顏色'],['up','上移'],['down','下移'],['fold','摺疊'],['del','刪除']];
 $('#bar').innerHTML=BAR.map(([a,l])=>`<button class="tb${a==='del'?' danger':''}" data-act="${a}"${a==='color'?' data-open':''}>${icon(a)}<span>${l}</span></button>`).join('');
 $('#bar').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled)act(b.dataset.act)});
 function updateBar(){
   const n=byId[sel],isR=n===map.root,p=n&&parentOf[n.id];
   const same=p?p.children.filter(c=>p!==map.root||sideOf(c)===sideOf(n)):[],i=same.indexOf(n);
-  const dis={child:false,sib:false,edit:!n,color:!n,up:!p||i<=0,down:!p||i>=same.length-1,fold:!n||isR||!n.children.length,del:!n||isR};
+  const dis={child:false,sib:false,edit:!n,note:!n,color:!n,up:!p||i<=0,down:!p||i>=same.length-1,fold:!n||isR||!n.children.length,del:!n||isR};
   for(const b of $('#bar').children){const a=b.dataset.act;b.disabled=dis[a];
     if(a==='fold'){const c=n&&n.collapsed;b.innerHTML=icon(c?'unfold':'fold')+`<span>${c?'展開':'摺疊'}</span>`}}
 }
@@ -751,6 +792,7 @@ $('#colorpop').addEventListener('click',e=>{const b=e.target.closest('[data-c]')
 
 const MENU=()=>[
   ['theme','🎨','顏色主題…'],['sync','☁️','同步設定…'],'-',
+  ['review','🗂️','回顧清單（時間與註記）'],['time',showTime?'🙈':'🕒',showTime?'隱藏建立時間':'在主題下方顯示建立時間'],'-',
   ['png','🖼️','匯出圖片 (PNG)'],['outline','📋','複製大綱文字'],['import','📥','匯入大綱文字／檔案'],['backup','💾','備份（全部心智圖）'],'-',
   ['layout',map.layout==='right'?'↔️':'➡️',map.layout==='right'?'版面：改為左右平衡':'版面：改為全部向右'],
   ['expand','➕','全部展開'],['collapse','➖','全部摺疊到第一層'],'-',['help','❓','使用說明']];
@@ -762,7 +804,7 @@ function openMenu(){
 }
 $('#bMore').onclick=openMenu;
 $('#menu').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;closeMenus();const k=b.dataset.m;
-  ({theme:showTheme,sync:showSync,png:exportPNG,outline:showOutline,import:showImport,backup:showBackup,help:showHelp,
+  ({theme:showTheme,sync:showSync,review:showReview,time:()=>{showTime=!showTime;LS.set('mm.showTime',showTime);render()},png:exportPNG,outline:showOutline,import:showImport,backup:showBackup,help:showHelp,
     layout:()=>mutate(()=>{if(map.layout==='right'){map.layout='both';balanceSides(map.root)}else map.layout='right'}),
     expand:()=>mutate(()=>{(function w(n){n.collapsed=false;n.children.forEach(w)})(map.root)}),
     collapse:()=>{sel=map.root.id;mutate(()=>{map.root.children.forEach(c=>{if(c.children.length)c.collapsed=true})})}
@@ -819,7 +861,9 @@ async function exportPNG(){
 }
 function toOutline(n,d=0){
   const line=d===0?'# '+oneLine(n.text):'  '.repeat(d-1)+'- '+oneLine(n.text);
-  return [line,...n.children.map(c=>toOutline(c,d+1))].join('\n');
+  const ind=d===0?'':'  '.repeat(d);
+  const notes=n.note?n.note.split('\n').map(l=>ind+'> '+l):[];
+  return [line,...notes,...n.children.map(c=>toOutline(c,d+1))].join('\n');
 }
 function textBox(val,rows){const t=document.createElement('textarea');t.rows=rows||12;t.value=val;t.readOnly=true;t.addEventListener('focus',()=>t.select());return t}
 function showOutline(){
@@ -841,9 +885,11 @@ function showHelp(){
 <tr><td>新增子主題</td><td>選取後按主題外側的藍色 <b>＋</b>；或按 <kbd>Tab</kbd>（編輯中也可以）</td></tr>
 <tr><td>新增同層</td><td>按主題下方的藍色 <b>＋</b>；或按 <kbd>Enter</kbd></td></tr>
 <tr><td>刪除</td><td>按主題角落的紅色 <b>×</b>；或按 <kbd>Delete</kbd>。刪錯了按提示上的「復原」</td></tr>
+<tr><td>註記</td><td>按下方「註記」或主題角落的黃色圖示，寫下想法、回饋；會記錄建立與修改時間</td></tr>
+<tr><td>回顧</td><td>右上 ⋮ →「回顧清單」：依時間列出所有主題與註記，點一下跳到該主題；也可以在主題下方顯示建立時間</td></tr>
 <tr><td>修改文字</td><td>點兩下主題，或按「編輯」／<kbd>F2</kbd>；<kbd>Enter</kbd> 完成、<kbd>Shift</kbd>+<kbd>Enter</kbd> 換行</td></tr>
 <tr><td>搬移主題</td><td>按住主題拖到另一個主題上；拖到中心主題的左邊或右邊可換邊</td></tr>
-<tr><td>顏色主題</td><td>右上角調色盤：7 種配色，可選依層級或依分支上色</td></tr>
+<tr><td>顏色主題</td><td>右上角調色盤：14 種配色，可選依層級或依分支上色</td></tr>
 <tr><td>移動畫面</td><td>拖曳空白處；兩指或滾輪縮放；右下角 ＋／－／置中</td></tr>
 <tr><td>同步</td><td>右上角雲朵。claude.ai 版自動用 Claude 帳號同步；GitHub Pages 版第一次要貼 GitHub 金鑰</td></tr>
 <tr><td>復原／重做</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd>／<kbd>Ctrl</kbd>+<kbd>Y</kbd></td></tr>
@@ -862,6 +908,8 @@ function parseOutline(txt){
   const items=[];let base=0,stk=[];
   for(const raw of txt.replace(/\r/g,'').split('\n')){
     if(!raw.trim())continue;
+    const q=raw.match(/^\s*>\s?(.*)$/);
+    if(q){if(items.length){const it=items[items.length-1];it.note=(it.note?it.note+'\n':'')+q[1]}continue}
     const m=raw.match(/^([ \t　]*)(#{1,6}\s+|[-*+•‧·]\s+|\d+[.)、]\s*)?(.*)$/);
     const ind=m[1].replace(/\t/g,'    ').replace(/　/g,'  ').length,mark=m[2]||'';
     const text=m[3].replace(/\*\*(.+?)\*\*/g,'$1').replace(/__(.+?)__/g,'$1').trim();if(!text)continue;
@@ -872,7 +920,7 @@ function parseOutline(txt){
   }
   if(!items.length)return null;
   const vroot=mk(''),s2=[vroot];
-  for(const it of items){const L=Math.min(it.lvl,s2.length-1),p=s2[L],n=mk(it.text);p.children.push(n);s2.length=L+1;s2.push(n)}
+  for(const it of items){const L=Math.min(it.lvl,s2.length-1),p=s2[L],n=mk(it.text);if(it.note)n.note=it.note;p.children.push(n);s2.length=L+1;s2.push(n)}
   const root=vroot.children.length===1?vroot.children[0]:Object.assign(mk('中心主題'),{children:vroot.children});
   balanceSides(root);return root;
 }
@@ -939,8 +987,8 @@ stage.addEventListener('pointerdown',e=>{
     gest={type:'pinch',d:Math.hypot(a.x-b.x,a.y-b.y)||1,k:view.k,wx:(c.x-view.x)/view.k,wy:(c.y-view.y)/view.k};return;
   }
   if(ptrs.size>2)return;
-  const ad=e.target.closest('[data-add]'),tg=e.target.closest('[data-toggle]'),nd=e.target.closest('[data-id]'),p=rel(e);
-  gest={type:ad?'add':tg?'toggle':nd?'node':'pan',id:ad?ad.dataset.add:tg?tg.dataset.toggle:nd?nd.dataset.id:null,sx:p.x,sy:p.y,vx:view.x,vy:view.y,moved:false};
+  const ad=e.target.closest('[data-add]'),nt=e.target.closest('[data-note]'),tg=e.target.closest('[data-toggle]'),nd=e.target.closest('[data-id]'),p=rel(e);
+  gest={type:ad?'add':nt?'note':tg?'toggle':nd?'node':'pan',id:ad?ad.dataset.add:nt?nt.dataset.note:tg?tg.dataset.toggle:nd?nd.dataset.id:null,sx:p.x,sy:p.y,vx:view.x,vy:view.y,moved:false};
 });
 stage.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId)||!gest)return;
@@ -951,7 +999,7 @@ stage.addEventListener('pointermove',e=>{
   }
   const dx=p.x-gest.sx,dy=p.y-gest.sy,far=Math.hypot(dx,dy)>7;
   if(gest.type==='pan'){if(far||gest.moved){gest.moved=true;stage.classList.add('panning');view.x=gest.vx+dx;view.y=gest.vy+dy;applyView()}return}
-  if(gest.type==='toggle'||gest.type==='add'){if(far)gest.type='none';return}
+  if(gest.type==='toggle'||gest.type==='add'||gest.type==='note'){if(far)gest.type='none';return}
   if(gest.type==='node'&&far){
     if(gest.id===map.root.id){gest={...gest,type:'pan',moved:true};return}
     gest.type='drag';const n=byId[gest.id];ghost.textContent=oneLine(n&&n.text)||'（空白）';ghost.style.display='block';
@@ -968,7 +1016,7 @@ function pointerEnd(e){
   if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
   stage.classList.remove('panning');
   if(!gest)return;
-  if(gest.type==='pinch'){if(!ptrs.size){gest=null;if(sel)render()}return}
+  if(gest.type==='pinch'){if(!ptrs.size)gest=null;return}
   const g=gest;gest=null;
   if(e.type==='pointercancel'){if(g.type==='drag')endDrag();return}
   if(g.type==='pan'&&!g.moved){if(sel){sel=null;render()}}
@@ -978,6 +1026,7 @@ function pointerEnd(e){
     else{lastTap={id:g.id,t:now};if(sel!==g.id){sel=g.id;render()}}
   }
   else if(g.type==='toggle')toggleCollapse(g.id);
+  else if(g.type==='note')openNote(g.id);
   else if(g.type==='add'){if(g.id==='sib')addSibling();else if(g.id==='del')delNode();else addChild(g.id==='l'||g.id==='r'?g.id:undefined)}
   else if(g.type==='drag'){
     const tid=dropId;ghost.style.display='none';dropId=null;
@@ -990,6 +1039,71 @@ stage.addEventListener('wheel',e=>{e.preventDefault();const p=rel(e);
   if(e.ctrlKey||e.metaKey||mouseWheel)zoomAt(p.x,p.y,Math.exp(-clamp(e.deltaMode?e.deltaY*33:e.deltaY,-120,120)*(e.ctrlKey?0.01:0.0015)));
   else{view.x-=e.deltaX;view.y-=e.deltaY;applyView()}
 },{passive:false});
+
+/* ---------- notes ---------- */
+let noteOpen=false,noteUndo=false,noteT;
+const npEl=$('#notePanel'),npText=$('#npText');
+function openNote(id){
+  if(id)sel=id;if(!byId[sel])return;closeMenus();
+  noteOpen=true;npEl.dataset.id='';render();npEl.classList.add('show');
+  const n=byId[sel],pr=npEl.getBoundingClientRect(),sr=stage.getBoundingClientRect();
+  if(pr.top>sr.top+80&&pr.left<sr.left+40){const by=sr.top+view.y+(n._y+n._h/2)*view.k;if(by>pr.top-16){view.y-=by-(pr.top-16);applyView()}}
+  else{const rx=sr.left+view.x+(n._x+n._w/2)*view.k;if(rx>pr.left-16&&pr.left>sr.left+200){view.x-=rx-(pr.left-16);applyView()}}
+  if(!byId[sel].note)setTimeout(()=>npText.focus(),60);
+}
+function closeNote(){if(!noteOpen)return;flushNote();noteOpen=false;npEl.classList.remove('show');npText.blur()}
+function fillNote(){
+  if(!noteOpen)return;const n=byId[sel];
+  if(!n){closeNote();return}
+  if(npEl.dataset.id!==n.id){flushNote();npEl.dataset.id=n.id;noteUndo=false;npText.value=n.note||''}
+  $('#npTitle').textContent=oneLine(n.text)||'（空白主題）';
+  $('.np-dot').style.background=n._col||th().root;
+  $('#npMeta').innerHTML=`<span>建立 <b>${fmtFull(n.created)}</b></span><span>修改 <b>${fmtFull(n.edited||n.created)}</b></span>`;
+}
+function flushNote(){
+  if(!noteT)return;clearTimeout(noteT);noteT=null;
+  const n=byId[npEl.dataset.id];if(n&&n.note!==undefined&&!n.note.trim())delete n.note;
+  save();
+}
+npText.addEventListener('input',()=>{
+  const n=byId[npEl.dataset.id];if(!n)return;
+  if(!noteUndo){pushUndo();noteUndo=true}
+  n.note=npText.value;n.edited=Date.now();
+  clearTimeout(noteT);noteT=setTimeout(()=>{flushNote();render()},600);
+});
+npText.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();closeNote()}});
+npText.addEventListener('blur',()=>{if(noteT){flushNote();render()}});
+$('#npClose').onclick=closeNote;
+
+function goTo(id){
+  const n=byId[id];if(!n)return;let x=parentOf[id],opened=false;
+  while(x){if(x.collapsed){x.collapsed=false;opened=true}x=parentOf[x.id]}
+  sel=id;if(opened)save();render();
+  const r=stage.getBoundingClientRect();view.x=r.width/2-n._x*view.k;view.y=(r.height-80)/2-n._y*view.k;applyView();
+}
+function showReview(){
+  let order='new',only=false;const w=document.createElement('div');
+  const rows=()=>{
+    const all=[];(function walk(n,path){all.push({n,path});n.children.forEach(c=>walk(c,[...path,oneLine(n.text)]))})(map.root,[]);
+    return all.filter(x=>!only||x.n.note).sort((a,b)=>order==='new'?(b.n.created||0)-(a.n.created||0):(a.n.created||0)-(b.n.created||0));
+  };
+  const draw=()=>{
+    const items=rows();
+    w.innerHTML=`<div class="seg"><button data-ord="new" class="${order==='new'?'on':''}">新 → 舊</button><button data-ord="old" class="${order==='old'?'on':''}">舊 → 新</button></div>
+<label class="chk"><input type="checkbox" ${only?'checked':''}> 只看有註記的主題</label>
+<div class="rv">${items.map(x=>`<button class="rvi" data-go="${x.n.id}"><span class="rvt">${fmtFull(x.n.created)}</span><b>${esc(oneLine(x.n.text)||'（空白）')}</b>${x.path.length?`<small>${esc(x.path.slice(-2).join(' › '))}</small>`:''}${x.n.note?`<p>${esc(x.n.note.length>160?x.n.note.slice(0,160)+'…':x.n.note)}</p>`:''}</button>`).join('')||'<p class="muted">沒有符合的主題</p>'}</div>`;
+  };
+  draw();
+  let ov;
+  w.addEventListener('click',e=>{
+    const o=e.target.closest('[data-ord]'),g=e.target.closest('[data-go]');
+    if(o){order=o.dataset.ord;draw()}
+    if(g){ov._close();goTo(g.dataset.go)}
+  });
+  w.addEventListener('change',e=>{if(e.target.type==='checkbox'){only=e.target.checked;draw()}});
+  ov=dialog({title:'回顧清單：'+(oneLine(map.root.text)||'心智圖'),body:w,buttons:[{label:'複製成文字',onClick:()=>{
+    copyText(rows().map(x=>`${fmtFull(x.n.created)}\t${[...x.path,oneLine(x.n.text)].join(' › ')}${x.n.note?'\n    註記：'+x.n.note.replace(/\n/g,'\n          '):''}`).join('\n'));return false}},{label:'關閉',cls:'primary'}]});
+}
 
 /* ---------- keyboard ---------- */
 document.addEventListener('keydown',e=>{
@@ -1006,7 +1120,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='Delete'||k==='Backspace'){e.preventDefault();act('del')}
   else if(k==='F2'||k===' '){e.preventDefault();act('edit')}
   else if(k.startsWith('Arrow')){e.preventDefault();nav(k)}
-  else if(k==='Escape'){closeMenus();closeDrawer()}
+  else if(k==='Escape'){closeMenus();closeDrawer();closeNote()}
 });
 
 /* ---------- init ---------- */
