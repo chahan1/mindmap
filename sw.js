@@ -1,0 +1,56 @@
+// 心智圖 - Service Worker（讓 App 可離線開啟）
+// 更新程式後，把版本號改掉，使用者下次開啟就會拿到新版
+const CACHE_NAME = 'mindmap-v1.3.0';
+const APP_FILES = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './maskable-192.png',
+  './maskable-512.png',
+  './apple-touch-icon.png'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache =>
+      // 個別加入，某個檔案失敗也不影響其他檔案
+      Promise.all(APP_FILES.map(url => cache.add(url).catch(err => console.warn('快取失敗:', url, err))))
+    ).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k.startsWith('mindmap-') && k !== CACHE_NAME).map(k => caches.delete(k))
+    )).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;                        // 同步上傳（PATCH/POST）不處理
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;         // GitHub 同步等其他網站：直接連網
+  if (!url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
+
+  if (req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+    // 網頁本體：優先連網拿最新版，沒網路時用快取
+    event.respondWith(
+      fetch(req).then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE_NAME).then(c => c.put(req, copy)); }
+        return res;
+      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+    );
+  } else {
+    // 圖示等：優先用快取
+    event.respondWith(
+      caches.match(req).then(cached => cached || fetch(req).then(res => {
+        if (res.ok) { const copy = res.clone(); caches.open(CACHE_NAME).then(c => c.put(req, copy)); }
+        return res;
+      }))
+    );
+  }
+});

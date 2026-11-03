@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#2563eb">
+<meta name="description" content="可在手機與電腦同步使用的心智圖 App">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="心智圖">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>心智圖</title>
+<style>
+:root{--bg:#f3f5f9;--dot:#d3d9e3;--panel:#ffffff;--glass:rgba(255,255,255,.82);--fg:#1f2937;--muted:#6b7280;--line:#e6e9ef;--hover:#eef1f6;--accent:#2563eb;--accent2:#7c3aed;--danger:#dc2626;--shadow:0 10px 30px rgba(15,23,42,.12),0 2px 6px rgba(15,23,42,.06)}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1116;--dot:#232a34;--panel:#1a1f26;--glass:rgba(26,31,38,.82);--fg:#e5e7eb;--muted:#9ca3af;--line:#2b323c;--hover:#252c35;--accent:#60a5fa;--accent2:#a78bfa;--danger:#f87171;--shadow:0 10px 30px rgba(0,0,0,.5)}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;-webkit-tap-highlight-color:transparent}
+button,input,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+#top{position:fixed;top:0;left:0;right:0;height:56px;display:flex;align-items:center;gap:2px;padding:0 8px;padding-top:env(safe-area-inset-top);background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);z-index:10}
+.brand{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding-left:2px}
+.logo{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 3px 10px rgba(37,99,235,.35)}
+.logo svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round}
+#title{flex:1;min-width:0;border:0;background:none;font-size:17px;font-weight:700;padding:7px 8px;border-radius:9px;letter-spacing:.2px;text-overflow:ellipsis}
+#title:hover{background:var(--hover)}
+#title:focus{outline:2px solid var(--accent);background:var(--panel)}
+.ib{width:40px;height:40px;border:0;background:none;border-radius:12px;display:grid;place-items:center;cursor:pointer;flex:none;padding:0;transition:background .15s,transform .1s}
+.ib:hover{background:var(--hover)}.ib:active{transform:scale(.92)}.ib:disabled{opacity:.28;cursor:default;background:none;transform:none}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#stage{position:fixed;top:calc(56px + env(safe-area-inset-top));left:0;right:0;bottom:0;touch-action:none;cursor:grab;overflow:hidden;background-color:var(--bg);background-image:radial-gradient(var(--dot) 1.1px,transparent 1.4px)}
+#stage.panning{cursor:grabbing}
+#svg{width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none}
+.node{cursor:pointer}
+.hdl{cursor:pointer;transition:opacity .15s}
+#bar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:2px;padding:5px;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);z-index:10;max-width:calc(100vw - 12px);overflow-x:auto;scrollbar-width:none}
+#bar::-webkit-scrollbar{display:none}
+.tb{border:0;background:none;border-radius:14px;padding:7px 4px 5px;min-width:48px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:11px;font-weight:500;flex:none;transition:background .15s,transform .1s}
+.tb:hover{background:var(--hover)}.tb:active{transform:scale(.93)}.tb:disabled{opacity:.25;cursor:default;background:none;transform:none}
+.tb.danger{color:var(--danger)}
+.tb svg.i{width:21px;height:21px}
+#zoom{position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));display:flex;flex-direction:column;background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);z-index:9;overflow:hidden}
+#zoom .ib{border-radius:0;width:40px;height:38px}
+#zoom .ib svg.i{width:19px;height:19px}
+#zoom span{font-size:10px;text-align:center;color:var(--muted);padding:1px 0 3px;font-variant-numeric:tabular-nums}
+#editor{position:fixed;z-index:20;display:none;border:2px solid var(--accent);border-radius:10px;resize:none;overflow:hidden;text-align:center;background:var(--panel);color:var(--fg);line-height:1.3;outline:none;white-space:pre-wrap;word-break:break-word;box-shadow:0 0 0 5px color-mix(in srgb,var(--accent) 22%,transparent),var(--shadow)}
+.pop{position:fixed;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:6px;display:none}
+.pop.show{display:block;animation:pop .14s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(4px) scale(.98)}}
+#menu{top:calc(60px + env(safe-area-inset-top));right:8px;min-width:236px}
+#menu button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:15px}
+#menu button:hover{background:var(--hover)}
+#menu hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
+#menu .ver{font-size:11px;color:var(--muted);padding:4px 12px 2px}
+#colorpop{display:none;gap:8px;flex-wrap:wrap;width:262px;padding:10px}
+#colorpop.show{display:flex}
+.sw{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);cursor:pointer;font-size:11px;color:var(--muted);transition:transform .1s}
+.sw:hover{transform:scale(1.08)}
+.sw.on{outline:3px solid var(--accent);outline-offset:2px}
+#scrim{position:fixed;inset:0;background:rgba(15,23,42,.35);z-index:40;display:none}
+#scrim.show{display:block}
+#drawer{position:fixed;top:0;bottom:0;left:0;width:min(340px,88vw);background:var(--panel);z-index:41;transform:translateX(-102%);transition:transform .22s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;box-shadow:var(--shadow);padding-top:env(safe-area-inset-top)}
+#drawer.open{transform:none}
+#drawer header{display:flex;align-items:center;justify-content:space-between;padding:14px 10px 10px 18px;font-weight:800;font-size:18px}
+#newmap{margin:0 14px 10px;padding:12px;border:0;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:14px;cursor:pointer;font-weight:700;box-shadow:0 4px 14px rgba(37,99,235,.3)}
+#dlist{flex:1;overflow:auto;padding:2px 10px 16px}
+.mi{display:flex;align-items:center;gap:2px;padding:9px 4px 9px 10px;border-radius:14px;cursor:pointer;border:1px solid transparent;margin-bottom:4px}
+.mi:hover{background:var(--hover)}.mi.on{background:color-mix(in srgb,var(--accent) 10%,transparent);border-color:color-mix(in srgb,var(--accent) 35%,transparent)}
+.strip{display:flex;flex-direction:column;gap:2px;margin-right:8px}
+.strip i{display:block;width:6px;height:8px;border-radius:3px}
+.mt{flex:1;min-width:0}.mt b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650}
+.mt small{color:var(--muted);font-size:12px}
+.mi .ib{width:34px;height:34px;color:var(--muted)}.mi svg.i{width:18px;height:18px}
+.ov{position:fixed;inset:0;background:rgba(15,23,42,.42);z-index:60;display:grid;place-items:center;padding:16px;animation:fade .15s}
+.ov.sheet{background:rgba(15,23,42,.12);place-items:end center;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+@keyframes fade{from{opacity:0}}
+.dlg{background:var(--panel);border-radius:22px;box-shadow:var(--shadow);width:min(520px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column;animation:pop .16s ease-out}
+.dlg h3{margin:0;padding:18px 20px 6px;font-size:18px}
+.db{padding:6px 20px;overflow:auto}
+.db p{margin:6px 0 10px;line-height:1.65}
+.db ol{margin:4px 0 10px;padding-left:22px;line-height:1.7}
+.db code{background:var(--hover);padding:1px 5px;border-radius:5px}
+.db textarea,.db input[type=password],.db input[type=text]{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px;background:var(--bg);font-size:14px;line-height:1.5;resize:vertical}
+.db img{max-width:100%;border:1px solid var(--line);border-radius:12px;display:block;margin:0 auto}
+.df{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 18px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);padding:9px 16px;border-radius:12px;cursor:pointer;font-weight:650;display:inline-block;text-decoration:none;color:var(--fg)}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.ghost{color:var(--danger)}
+.muted{color:var(--muted);font-size:13.5px}
+.keys{width:100%;border-collapse:collapse;font-size:14px}
+.keys td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.55}
+.keys td:first-child{white-space:nowrap;font-weight:650;padding-right:12px}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;font-size:12px;background:var(--bg)}
+.seg{display:flex;background:var(--hover);border-radius:12px;padding:3px;margin:4px 0 12px}
+.seg button{flex:1;border:0;background:none;padding:8px;border-radius:10px;cursor:pointer;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px;margin-bottom:8px}
+.thc{border:2px solid var(--line);background:var(--panel);border-radius:16px;padding:10px 8px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;font-weight:600;font-size:14px;transition:transform .1s,border-color .15s}
+.thc:hover{transform:translateY(-1px)}
+.thc.on{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.thp{display:flex;align-items:center;gap:4px}
+.thp i{width:26px;height:16px;border-radius:6px;display:block}
+.thp b{width:13px;height:13px;border-radius:50%;display:block}
+#ghost{position:fixed;z-index:50;pointer-events:none;background:var(--accent);color:#fff;padding:7px 13px;border-radius:12px;font-size:14px;display:none;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.94;box-shadow:var(--shadow)}
+#toast{position:fixed;left:50%;top:calc(68px + env(safe-area-inset-top));transform:translateX(-50%) translateY(-6px);background:#1f2937;color:#fff;padding:10px 14px 10px 16px;border-radius:14px;font-size:14px;z-index:70;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:92vw;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+#toast.show{opacity:.97;transform:translateX(-50%)}
+@media (max-width:440px){.logo{display:none}.tb{min-width:41px;font-size:10px;padding:6px 2px 4px}#bar{gap:0}#zoom{bottom:calc(84px + env(safe-area-inset-bottom));right:8px}}
+#toast button{border:0;background:rgba(255,255,255,.16);color:#fff;font-weight:700;border-radius:9px;padding:5px 11px;cursor:pointer;pointer-events:auto}
+</style>
+</head>
+<body>
+<div id="top">
+  <button class="ib" id="bDrawer" title="我的心智圖"></button>
+  <div class="brand"><span class="logo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M15 12h3M6 12h3M12 9V6M12 15v3"/><circle cx="20" cy="12" r="1.6"/><circle cx="4" cy="12" r="1.6"/><circle cx="12" cy="4" r="1.6"/><circle cx="12" cy="20" r="1.6"/></svg></span><input id="title" maxlength="80" aria-label="中心主題"></div>
+  <button class="ib" id="bSync" title="同步"></button>
+  <button class="ib" id="bUndo" title="復原 (Ctrl+Z)"></button>
+  <button class="ib" id="bRedo" title="重做 (Ctrl+Y)"></button>
+  <button class="ib" id="bTheme" title="顏色主題"></button>
+  <button class="ib" id="bMore" data-open title="更多"></button>
+</div>
+<div id="stage"><svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
+<div id="zoom"><button class="ib" id="zIn" title="放大"></button><button class="ib" id="zOut" title="縮小"></button><button class="ib" id="zFit" title="全部置中"></button><span id="zPct">100%</span></div>
+<div id="bar"></div>
+<textarea id="editor" rows="1" spellcheck="false"></textarea>
+<div id="menu" class="pop"></div>
+<div id="colorpop" class="pop"></div>
+<div id="scrim"></div>
+<aside id="drawer">
+  <header><span>我的心智圖</span><button class="ib" id="bCloseDrawer" title="關閉"></button></header>
+  <button id="newmap">＋ 新增心智圖</button>
+  <div id="dlist"></div>
+</aside>
+<div id="ghost"></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const VERSION='v1.3.0';
+const $=s=>document.querySelector(s);
+const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
+
+/* ---------- color themes ---------- */
+const THEMES={
+  vivid:  {name:'繽紛', root:'#1e293b',levels:['#2563eb','#16a34a','#ea580c','#9333ea','#0891b2','#db2777'],branch:['#ea580c','#2563eb','#16a34a','#9333ea','#dc2626','#0891b2','#d97706','#db2777']},
+  ocean:  {name:'海洋', root:'#0c4a6e',levels:['#0369a1','#0891b2','#0d9488','#4f46e5','#2563eb','#0e7490']},
+  forest: {name:'森林', root:'#14532d',levels:['#15803d','#65a30d','#b45309','#0f766e','#4d7c0f','#a16207']},
+  sunset: {name:'夕陽', root:'#7c2d12',levels:['#ea580c','#e11d48','#d97706','#c026d3','#dc2626','#b45309']},
+  candy:  {name:'糖果', root:'#be185d',levels:['#ec4899','#8b5cf6','#3b82f6','#10b981','#f59e0b','#ef4444']},
+  morandi:{name:'莫蘭迪',root:'#57534e',levels:['#7d8f7f','#b08b7e','#7f8ea8','#a8956b','#957d9c','#6f9a98']},
+  mono:   {name:'簡約', root:'#111827',levels:['#374151','#6b7280','#4b5563','#9ca3af','#1f2937','#6b7280']}
+};
+const PALETTE=['#e8590c','#1971c2','#2f9e44','#9c36b5','#e03131','#0c8599','#f08c00','#c2255c'];
+const UI={
+  light:{fg:'#1f2937',nodeFill:'#ffffff',sel:'#2563eb',tint:.1,shadow:.13,rootStroke:'none'},
+  dark:{fg:'#e5e7eb',nodeFill:'#1a1f26',sel:'#60a5fa',tint:.2,shadow:.55,rootStroke:'rgba(255,255,255,.22)'}
+};
+const mq=matchMedia('(prefers-color-scheme: dark)');
+const ui=()=>mq.matches?UI.dark:UI.light;
+const th=m=>THEMES[(m||map).theme]||THEMES.vivid;
+function hexRgb(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h.slice(0,6),16);return[n>>16&255,n>>8&255,n&255]}
+function mix(h,w,a){const c=hexRgb(h),d=hexRgb(w);return '#'+c.map((v,i)=>Math.round(v+(d[i]-v)*a).toString(16).padStart(2,'0')).join('')}
+function textOn(h){const [r,g,b]=hexRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return (.2126*r+.7152*g+.0722*b)>.45?'#1f2937':'#ffffff'}
+
+/* ---------- icons ---------- */
+const IC={
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H9a5 5 0 0 0 0 10h3"/>',
+  fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
+  zin:'<path d="M12 5v14M5 12h14"/>',zout:'<path d="M5 12h14"/>',
+  more:'<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+  child:'<rect x="2.5" y="9" width="8" height="6" rx="2"/><path d="M10.5 12h3"/><path d="M18 8.5v7M14.5 12h7"/>',
+  sib:'<rect x="5" y="2.5" width="14" height="6" rx="2"/><path d="M12 8.5v3"/><path d="M12 14.5v7M8.5 18h7"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  color:'<path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-1-.8-1.4-.8-2.3 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>',
+  up:'<path d="m6 15 6-6 6 6"/>',down:'<path d="m6 9 6 6 6-6"/>',
+  fold:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',unfold:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/>',
+  del:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
+  close:'<path d="M6 6l12 12M18 6 6 18"/>',
+  cloud:'<path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.9 10.5 3.75 3.75 0 0 1 17.25 18Z"/>'
+};
+IC.cloudOk=IC.cloud+'<path d="m9.5 13.8 1.9 1.9 3.6-3.6"/>';
+IC.cloudSync=IC.cloud+'<path d="M12 11.5v4.5M10 14l2 2 2-2"/>';
+IC.cloudOff=IC.cloud+'<path d="M3 3l18 18"/>';
+const icon=n=>`<svg class="i" viewBox="0 0 24 24">${IC[n]}</svg>`;
+[['#bDrawer','menu'],['#bUndo','undo'],['#bRedo','redo'],['#bTheme','color'],['#bMore','more'],['#bCloseDrawer','close'],['#zIn','zin'],['#zOut','zout'],['#zFit','fit']].forEach(([s,n])=>$(s).innerHTML=icon(n));
+
+/* ---------- helpers ---------- */
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const strip=(k,v)=>k&&k[0]==='_'?undefined:v;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const oneLine=s=>String(s||'').replace(/\s*\n\s*/g,' ').trim();
+const count=n=>1+n.children.reduce((a,c)=>a+count(c),0);
+const mk=(text,...kids)=>({id:uid(),text,children:kids,collapsed:false,color:null});
+const isHex=c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c);
+const validId=id=>typeof id==='string'&&/^[\w-]{1,60}$/.test(id);
+function fmtDate(t){if(!t)return'';const d=new Date(t),p=x=>String(x).padStart(2,'0');return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`}
+let toastT;
+function toast(m,action){
+  const t=$('#toast');t.innerHTML='';const s=document.createElement('span');s.textContent=m;t.appendChild(s);
+  if(action){const b=document.createElement('button');b.textContent=action.label;b.onclick=()=>{t.classList.remove('show');action.fn()};t.appendChild(b)}
+  t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),action?4500:2300);
+}
+async function copyText(t){try{await navigator.clipboard.writeText(t);toast('已複製');return true}catch(e){toast('無法自動複製，請手動選取文字後複製');return false}}
+const safeName=s=>(oneLine(s)||'心智圖').replace(/[\\/:*?"<>|]/g,'').slice(0,40);
+const LS={
+  get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v,strip));return true}catch(e){return false}}
+};
+let dl=null;
+async function saveFile(name,blob){
+  if(dl){try{await dl.save({filename:name,data:blob});toast('已下載');return}catch(e){if(e&&(e.code==='declined'||e.code==='rate_limited'))return}}
+  try{const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000)}catch(e){}
+}
+
+/* ---------- data ---------- */
+function balanceSides(R){let l=0,r=0;for(const c of R.children){const w=count(c);if(r<=l){c.side='r';r+=w}else{c.side='l';l+=w}}}
+const defTheme=()=>THEMES[LS.get('mm.theme','vivid')]?LS.get('mm.theme','vivid'):'vivid';
+function sampleMap(){
+  const root=mk('心智圖使用說明',
+    mk('新增主題',mk('點一下主題，再按藍色 ＋'),mk('鍵盤：Tab 子主題、Enter 同層')),
+    mk('編輯文字',mk('點兩下主題就能修改'),mk('Shift + Enter 可以換行')),
+    mk('刪除與整理',mk('選取後按紅色 × 刪除'),mk('拖到另一個主題上＝搬過去'),mk('摺疊分支，畫面更清爽')),
+    mk('外觀',mk('右上角調色盤換顏色主題'),mk('依層級或依分支上色')),
+    mk('儲存與同步',mk('手機、電腦自動同步'),mk('匯出圖片 PNG'),mk('貼上大綱文字自動產生')));
+  balanceSides(root);
+  return {id:uid(),root,layout:'both',colorMode:'level',theme:defTheme(),updated:Date.now(),sample:true};
+}
+function blankMap(){return {id:uid(),root:mk('中心主題'),layout:'both',colorMode:'level',theme:defTheme(),updated:Date.now()}}
+function san(n,d=0,keep=false){
+  if(d>60||!n||typeof n!=='object')return mk('');
+  const o={id:keep&&validId(n.id)?n.id:uid(),text:String(n.text??'').slice(0,2000),
+    children:Array.isArray(n.children)?n.children.map(c=>san(c,d+1,keep)):[],collapsed:!!n.collapsed,color:isHex(n.color)?n.color:null};
+  if(n.side==='l'||n.side==='r')o.side=n.side;return o;
+}
+const cleanMeta=m=>({layout:m.layout==='right'?'right':'both',colorMode:m.colorMode==='branch'?'branch':'level',theme:THEMES[m.theme]?m.theme:'vivid'});
+
+/* ---------- state ---------- */
+let maps=LS.get('mm.maps',null);
+const firstRun=!Array.isArray(maps)||!maps.length;
+if(firstRun)maps=[sampleMap()];
+maps=maps.filter(m=>m&&m.root).map(m=>Object.assign(m,cleanMeta(m)));
+if(!maps.length)maps=[sampleMap()];
+let map=maps.find(m=>m.id===LS.get('mm.cur',null))||maps[0];
+let sel=map.root.id,byId={},parentOf={};
+let view={x:0,y:0,k:1};
+let undoS=[],redoS=[],editing=null,dropId=null,gest=null,storageWarned=false;
+const deleted=LS.get('mm.deleted',{})||{};
+
+/* ---------- persistence ---------- */
+let lsT;
+function persistLocal(){
+  clearTimeout(lsT);
+  lsT=setTimeout(()=>{
+    const ok=LS.set('mm.maps',maps)&&LS.set('mm.cur',map.id)&&LS.set('mm.deleted',deleted);
+    if(!ok&&!storageWarned&&sync.state!=='ok'){storageWarned=true;toast('這個瀏覽器無法自動儲存，請記得下載備份檔')}
+  },250);
+}
+function save(m){m=m||map;m.updated=Date.now();delete m.sample;persistLocal();queueUpload(m.id)}
+
+/* ======================================================================
+   SYNC — two backends sharing one merge:
+   • claude.ai artifact → private per-person db
+   • anywhere else (e.g. GitHub Pages) → a secret GitHub Gist
+   ====================================================================== */
+const sync={mode:'gist',state:'setup',first:true};
+const SYNC_INFO={
+  ok:['已同步','#16a34a','cloudOk'],syncing:['同步中…','var(--accent)','cloudSync'],
+  offline:['暫時連不上','#d97706','cloudOff'],error:['同步失敗','var(--danger)','cloudOff'],
+  setup:['尚未設定同步','var(--muted)','cloudOff'],local:['只存在這台裝置','var(--muted)','cloudOff']
+};
+function setSync(st){sync.state=st;const b=$('#bSync'),i=SYNC_INFO[st];b.innerHTML=icon(i[2]);b.style.color=i[1];b.title='同步：'+i[0]}
+const mapBody=m=>Object.assign({root:JSON.parse(JSON.stringify(m.root,strip)),updated:m.updated||Date.now()},cleanMeta(m));
+function fromRemote(id,o){return Object.assign({id,root:san(o.root,0,true),updated:Number(o.updated)||0},cleanMeta(o))}
+const newestMap=()=>[...maps].sort((a,b)=>(b.updated||0)-(a.updated||0))[0];
+
+/* merge remote entries [{id,o}] into local; returns ids local must push */
+function applyRemote(entries,authoritative){
+  let cur=false,list=false;const seen={},push=new Set();
+  for(const {id,o} of entries){
+    if(!validId(id)||!o||typeof o!=='object')continue;seen[id]=o;
+    const ru=Number(o.updated)||0,local=maps.find(m=>m.id===id);
+    if(o.deleted){
+      deleted[id]=Math.max(deleted[id]||0,ru);
+      if(local){if((local.updated||0)<=ru){maps=maps.filter(m=>m!==local);list=true;if(local===map)cur=true}else push.add(id)}
+      continue;
+    }
+    if(!o.root||typeof o.root!=='object')continue;
+    if(!local){if((deleted[id]||0)>=ru){push.add(id);continue}delete deleted[id];maps.push(fromRemote(id,o));list=true;continue}
+    if(ru>(local.updated||0)){
+      if(local===map&&editing){push.add(id);continue}
+      Object.assign(local,fromRemote(id,o));delete local.sample;list=true;if(local===map)cur=true;
+    }else if((local.updated||0)>ru&&!local.sample)push.add(id);
+  }
+  if(authoritative){
+    if(sync.first){
+      sync.first=false;const s=maps.find(m=>m.sample);
+      if(s&&Object.values(seen).some(o=>!o.deleted)){maps=maps.filter(m=>m!==s);list=true;if(s===map)cur=true}
+    }
+    for(const m of maps)if(!m.sample&&!seen[m.id])push.add(m.id);
+    for(const id of Object.keys(deleted)){const o=seen[id];if(!o||!o.deleted)push.add(id)}
+  }
+  if(!maps.length){const b=blankMap();maps.push(b);push.add(b.id);list=true}
+  if(cur){if(!maps.includes(map)){map=newestMap();sel=map.root.id}undoS=[];redoS=[];render();fit()}
+  if(list){persistLocal();if($('#drawer').classList.contains('open'))renderDrawer()}
+  return push;
+}
+function queueUpload(id){
+  if(sync.mode==='claude'){
+    if(!db.col)return;const m=maps.find(x=>x.id===id);if(m&&m.sample)return;
+    clearTimeout(db.timers[id]);db.timers[id]=setTimeout(()=>dbFlush(id),700);
+  }else if(gh.token){clearTimeout(gh.t);gh.t=setTimeout(()=>ghSync(),1500)}
+}
+
+/* ---- backend 1: claude.ai db ---- */
+const db={col:null,writing:{},dirty:{},timers:{}};
+async function dbFlush(id,retried){
+  if(!db.col)return;
+  if(db.writing[id]){db.dirty[id]=true;return}
+  const m=maps.find(x=>x.id===id);if(m&&m.sample)return;
+  const body=m?mapBody(m):{deleted:true,updated:deleted[id]||Date.now()};
+  db.writing[id]=true;setSync('syncing');let failed=false;
+  try{await db.col.doc(id).set(body)}
+  catch(e){
+    failed=true;const c=e&&e.code;
+    if(c==='unavailable'&&!retried){db.writing[id]=false;setTimeout(()=>dbFlush(id,true),800+Math.random()*1500);return}
+    if(c==='quota_exceeded')toast('同步空間已滿，請刪除一些不需要的心智圖');
+    setSync(c==='unavailable'?'offline':'error');
+  }
+  db.writing[id]=false;
+  if(db.dirty[id]){db.dirty[id]=false;dbFlush(id);return}
+  if(!failed&&!Object.values(db.writing).some(Boolean))setSync('ok');
+}
+async function initDb(){
+  setSync('syncing');
+  claude.use('downloads').then(d=>{dl=d}).catch(()=>{});
+  let d=null,user=null;
+  try{[d,user]=await Promise.all([claude.use('db'),claude.use('user')])}catch(e){}
+  const id=user&&await user.id().catch(()=>null);
+  if(!d||!id){setSync('local');return}
+  try{db.col=d.collection('data/users/'+id)}catch(e){setSync('local');return}
+  let to=setTimeout(()=>{if(sync.state==='syncing')setSync('offline')},10000);
+  db.col.onSnapshot(snap=>{
+    if(!snap.metadata.fromCache&&to){clearTimeout(to);to=null}
+    const push=applyRemote(snap.docs.map(x=>({id:x.id,o:x.data()})),!snap.metadata.fromCache);
+    push.forEach(queueUpload);
+    if(!snap.metadata.fromCache&&!push.size&&!Object.values(db.writing).some(Boolean))setSync('ok');
+  },err=>{if(to){clearTimeout(to);to=null}setSync(err&&err.code==='unavailable'?'offline':'error')});
+}
+
+/* ---- backend 2: GitHub Gist ---- */
+const GIST_FILE='mindmap-sync.json';
+const gh={token:LS.get('mm.ghToken','')||'',gistId:LS.get('mm.gistId','')||'',login:LS.get('mm.ghLogin','')||'',busy:false,again:false,t:null,last:LS.get('mm.ghLast',0)||0,err:''};
+async function ghFetch(path,opt={}){
+  const h={'Accept':'application/vnd.github+json','Authorization':'Bearer '+(opt.token||gh.token)};
+  if(opt.body)h['Content-Type']='application/json';
+  const r=await fetch('https://api.github.com'+path,{method:opt.method||'GET',headers:h,body:opt.body,cache:'no-store'});
+  if(!r.ok){const e=new Error('GitHub '+r.status);e.status=r.status;throw e}
+  return r.status===204?null:r.json();
+}
+async function ghFind(){
+  for(let page=1;page<=10;page++){
+    const list=await ghFetch(`/gists?per_page=100&page=${page}`);
+    const g=list.find(x=>x.files&&x.files[GIST_FILE]);
+    if(g){gh.gistId=g.id;LS.set('mm.gistId',g.id);return}
+    if(list.length<100)break;
+  }
+  const g=await ghFetch('/gists',{method:'POST',body:JSON.stringify({description:'心智圖 App 同步資料（請勿刪除）',public:false,
+    files:{[GIST_FILE]:{content:JSON.stringify({app:'mindmap',version:2,maps:[],deleted:{}})}}})});
+  gh.gistId=g.id;LS.set('mm.gistId',g.id);
+}
+async function ghPull(){
+  const g=await ghFetch('/gists/'+gh.gistId),f=g.files&&g.files[GIST_FILE];
+  if(!f)return {maps:[],deleted:{}};
+  let txt=f.content;
+  if(f.truncated&&f.raw_url)txt=await (await fetch(f.raw_url,{cache:'no-store'})).text();
+  try{return JSON.parse(txt)||{}}catch(e){return {maps:[],deleted:{}}}
+}
+function ghEntries(r){
+  const out=[];
+  for(const m of (Array.isArray(r.maps)?r.maps:[]))if(m&&m.id)out.push({id:String(m.id),o:m});
+  for(const [id,t] of Object.entries(r.deleted&&typeof r.deleted==='object'?r.deleted:{}))if(!out.some(e=>e.id===id))out.push({id,o:{deleted:true,updated:Number(t)||0}});
+  return out;
+}
+function ghBuild(){
+  const ms=maps.filter(m=>!m.sample).map(m=>Object.assign({id:m.id},mapBody(m)));
+  const del={};for(const [id,t] of Object.entries(deleted))if(!ms.some(m=>m.id===id))del[id]=t;
+  return {app:'mindmap',version:2,saved:new Date().toISOString(),maps:ms,deleted:del};
+}
+async function ghSync(manual){
+  if(sync.mode!=='gist'||!gh.token)return;
+  if(gh.busy){gh.again=true;return}
+  gh.busy=true;clearTimeout(gh.t);setSync('syncing');
+  try{
+    if(!gh.gistId)await ghFind();
+    let remote;
+    try{remote=await ghPull()}catch(e){if(e.status!==404)throw e;gh.gistId='';LS.set('mm.gistId','');await ghFind();remote=await ghPull()}
+    const push=applyRemote(ghEntries(remote),true);
+    if(push.size)await ghFetch('/gists/'+gh.gistId,{method:'PATCH',body:JSON.stringify({files:{[GIST_FILE]:{content:JSON.stringify(ghBuild())}}})});
+    gh.last=Date.now();LS.set('mm.ghLast',gh.last);gh.err='';setSync('ok');if(manual)toast('已同步');
+  }catch(e){
+    gh.err=e.status===401?'金鑰無效或已過期，請重新設定。':e.status===403||e.status===429?'GitHub 拒絕存取（金鑰可能沒有勾 gist 權限，或短時間內同步太多次）。':
+      navigator.onLine===false?'目前沒有網路，變更會先存在這台裝置。':'連不上 GitHub，變更會先存在這台裝置。';
+    setSync(e.status===401||e.status===403?'error':'offline');if(manual)toast(gh.err);
+  }finally{gh.busy=false;if(gh.again){gh.again=false;setTimeout(()=>ghSync(),400)}}
+}
+function initGist(){
+  if(!gh.token){setSync('setup');return}
+  ghSync();
+  gh.iv=setInterval(()=>{if(document.visibilityState==='visible'&&!editing&&!gest)ghSync()},30000);
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&sync.mode==='gist'&&gh.token)ghSync()});
+addEventListener('online',()=>{if(sync.mode==='gist'&&gh.token)ghSync()});
+
+function showSync(){
+  if(sync.mode==='claude'){
+    const txt={ok:'你的心智圖已存到你的 Claude 帳號。在其他裝置用同一個帳號打開這個網址，就會看到一樣的內容。',syncing:'正在和你的 Claude 帳號同步。',
+      offline:'目前連不上同步服務，變更會先存在這台裝置，連上網路後會自動同步。',error:'同步時發生問題，變更已先存在這台裝置。請重新整理頁面再試一次。',
+      local:'現在的開啟方式不能同步。請登入 Claude 後開啟這個網址。'}[sync.state]||'';
+    dialog({title:'同步：'+SYNC_INFO[sync.state][0],body:`<p>${txt}</p><p class="muted">同步的資料只有你自己的帳號看得到。</p>`,buttons:[{label:'知道了',cls:'primary'}]});return;
+  }
+  if(!gh.token){showGistSetup();return}
+  dialog({title:'同步：'+SYNC_INFO[sync.state][0],body:`<p>已連線到 GitHub 帳號 <b>${esc(gh.login||'')}</b>，心智圖存在你的秘密 Gist 裡。開啟 App、切回畫面、或每 30 秒會自動同步一次。</p>
+<p class="muted">上次同步：${gh.last?fmtDate(gh.last):'尚未同步'}${gh.err?'<br><span style="color:var(--danger)">'+esc(gh.err)+'</span>':''}</p>
+<p class="muted">其他裝置：用同一組 GitHub 金鑰設定一次就會自動同步。</p>`,
+    buttons:[{label:'中斷同步',cls:'ghost',onClick:async()=>{if(!await confirmDlg('要移除這台裝置的 GitHub 金鑰嗎？心智圖仍會留在這台裝置和你的 Gist 裡。','中斷同步',true))return;
+      gh.token='';gh.gistId='';LS.set('mm.ghToken','');LS.set('mm.gistId','');setSync('setup');toast('已中斷同步')}},
+      {label:'關閉'},{label:'立即同步',cls:'primary',onClick:()=>{ghSync(true)}}]});
+}
+function showGistSetup(){
+  const w=document.createElement('div');
+  w.innerHTML=`<p>用你的 GitHub 帳號裡的一個<b>秘密 Gist</b> 來同步。每台裝置設定一次就好：</p>
+<ol><li>按「建立 GitHub 金鑰」並登入 GitHub。</li>
+<li><b>Expiration</b> 選 <b>No expiration</b>（或你要的期限），權限只要勾 <b>gist</b>，按最下面的 <b>Generate token</b>。</li>
+<li>複製 <code>ghp_</code> 開頭的金鑰，貼到下面，按「連線」。</li>
+<li>手機、電腦都貼<b>同一組金鑰</b>（金鑰只會顯示一次，可以先存在記事本）。</li></ol>
+<p><a class="btn" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=%E5%BF%83%E6%99%BA%E5%9C%96%E5%90%8C%E6%AD%A5" target="_blank" rel="noopener">🔑 建立 GitHub 金鑰</a></p>
+<input type="password" placeholder="貼上金鑰（ghp_…）" autocomplete="off" spellcheck="false">
+<p class="muted">金鑰只存在這台裝置的瀏覽器，只能讀寫 Gist。秘密 Gist 不會出現在公開列表，但知道網址的人看得到，請不要放敏感資料。</p>`;
+  const inp=w.querySelector('input');
+  dialog({title:'設定同步',body:w,buttons:[{label:'取消'},{label:'連線',cls:'primary',onClick:async()=>{
+    const t=inp.value.trim();if(!t){toast('請先貼上金鑰');return false}
+    try{const u=await ghFetch('/user',{token:t});gh.token=t;gh.login=u.login||'';gh.gistId='';LS.set('mm.ghToken',t);LS.set('mm.ghLogin',gh.login);LS.set('mm.gistId','');
+      sync.first=true;toast('已連線：'+gh.login);ghSync(true);
+      if(!gh.iv){gh.iv=setInterval(()=>{if(document.visibilityState==='visible'&&!editing&&!gest)ghSync()},30000)}
+    }catch(e){toast(e.status===401?'金鑰不正確，請再確認一次':'連線失敗，請檢查網路');return false}
+  }}]});
+  setTimeout(()=>inp.focus(),60);
+}
+function initSync(){
+  if(window.claude&&typeof claude.use==='function'){sync.mode='claude';initDb()}
+  else{sync.mode='gist';initGist()}
+}
+
+/* ---------- undo ---------- */
+const snap=()=>JSON.stringify({root:map.root,layout:map.layout,colorMode:map.colorMode,theme:map.theme},strip);
+function pushUndo(){undoS.push(snap());if(undoS.length>100)undoS.shift();redoS=[]}
+function restore(s){const o=JSON.parse(s);map.root=o.root;map.layout=o.layout;map.colorMode=o.colorMode;map.theme=o.theme}
+function changed(){save();render()}
+function mutate(fn){pushUndo();fn();changed()}
+function undo(){if(!undoS.length)return;redoS.push(snap());restore(undoS.pop());changed()}
+function redo(){if(!redoS.length)return;undoS.push(snap());restore(redoS.pop());changed()}
+
+/* ---------- measuring & layout ---------- */
+const ST=[{fs:21,fw:800,px:26,py:16,maxW:280},{fs:16,fw:650,px:20,py:11,maxW:230},{fs:14,fw:450,px:14,py:8,maxW:210}];
+const st=d=>ST[Math.min(d,2)];
+const cv=document.createElement('canvas').getContext('2d');
+const TOK=/[⺀-鿿豈-﫿＀-￯　-〿]|[^\s⺀-鿿豈-﫿＀-￯　-〿]+|\s+/g;
+function wrap(text,s){
+  cv.font=`${s.fw} ${s.fs}px ${FONT}`;
+  const out=[],W=t=>cv.measureText(t).width;
+  for(const para of String(text||'').split('\n')){
+    let line='';
+    for(const t of (para.match(TOK)||[])){
+      const sp=/^\s+$/.test(t);
+      if(!line&&sp)continue;
+      if(W(line+t)<=s.maxW){line+=t;continue}
+      if(line){out.push(line.trimEnd());line='';if(sp)continue}
+      if(W(t)<=s.maxW){line=t;continue}
+      for(const ch of t){if(line&&W(line+ch)>s.maxW){out.push(line);line=ch}else line+=ch}
+    }
+    out.push(line.trimEnd());
+  }
+  return out;
+}
+const gapY=d=>d<=1?30:14;
+const cmode=()=>map.colorMode==='branch'?'branch':'level';
+const sideOf=c=>map.layout==='right'||c.side!=='l'?'r':'l';
+function layout(){
+  byId={};parentOf={};
+  const R=map.root,T=th();
+  (function m(n,p,d){
+    byId[n.id]=n;if(p)parentOf[n.id]=p;n._depth=d;
+    const s=st(d);n._lines=wrap(n.text,s);
+    let w=0;for(const l of n._lines)w=Math.max(w,cv.measureText(l).width);
+    n._w=Math.ceil(Math.max(w,s.fs*2))+s.px*2;
+    n._h=Math.ceil(n._lines.length*s.fs*1.32)+s.py*2;
+    n.children.forEach(c=>m(c,n,d+1));
+  })(R,null,0);
+  R._col=R.color||T.root;
+  if(cmode()==='level')(function w(n){if(n!==R)n._col=n.color||T.levels[(n._depth-1)%T.levels.length];n.children.forEach(w)})(R);
+  else{const B=T.branch||T.levels,setCol=(n,col)=>{n._col=col;n.children.forEach(k=>setCol(k,k.color||col))};R.children.forEach((c,i)=>setCol(c,c.color||B[i%B.length]))}
+  const sh=n=>{const k=n.collapsed?[]:n.children;if(!k.length)return n._sh=n._h;
+    const t=k.reduce((a,c)=>a+sh(c),0)+gapY(n._depth+1)*(k.length-1);return n._sh=Math.max(n._h,t)};
+  R.children.forEach(sh);
+  R._x=0;R._y=0;R._dir=0;
+  const place=(p,kids,dir)=>{
+    if(!kids.length)return;
+    const g=gapY(p._depth+1),tot=kids.reduce((a,c)=>a+c._sh,0)+g*(kids.length-1);
+    let y=p._y-tot/2;const gx=p._depth===0?70:42;
+    for(const c of kids){c._dir=dir;c._x=p._x+dir*(p._w/2+gx+c._w/2);c._y=y+c._sh/2;
+      place(c,c.collapsed?[]:c.children,dir);y+=c._sh+g}
+  };
+  place(R,R.children.filter(c=>sideOf(c)==='r'),1);
+  place(R,R.children.filter(c=>sideOf(c)==='l'),-1);
+}
+function visible(){const R=map.root,out=[];(function w(n){out.push(n);if(n===R||!n.collapsed)n.children.forEach(w)})(R);return out}
+function bounds(){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const n of visible()){
+    const extra=n.collapsed&&n.children.length?26:0;
+    x0=Math.min(x0,n._x-n._w/2-(n._dir<0?extra:0));x1=Math.max(x1,n._x+n._w/2+(n._dir>0?extra:0));
+    y0=Math.min(y0,n._y-n._h/2);y1=Math.max(y1,n._y+n._h/2);
+  }
+  return {x:x0,y:y0,w:x1-x0,h:y1-y0};
+}
+
+/* ---------- drawing ---------- */
+function drawSVG(U,exp){
+  const R=map.root,vis=visible(),rootFill=R._col;let E='',N='';
+  const defs=`<defs><filter id="sh" x="-20%" y="-30%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="3.2" flood-color="#0f172a" flood-opacity="${U.shadow}"/></filter>
+<filter id="sh2" x="-20%" y="-40%" width="140%" height="200%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="${rootFill}" flood-opacity=".35"/></filter>
+<linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(rootFill,'#ffffff',.18)}"/><stop offset="1" stop-color="${rootFill}"/></linearGradient></defs>`;
+  for(const n of vis){
+    if(n===R)continue;
+    const p=parentOf[n.id],d=n._dir,y1=p._y,x2=n._x-d*n._w/2,y2=n._y;
+    if(p===R){
+      const xs=p._x+d*(p._w/2-12),xe=x2+d*2,mx=(p._x+d*p._w/2+xe)/2,w0=8,w1=2.6;
+      E+=`<path d="M${xs},${y1-w0/2}C${mx},${y1-w0/2} ${mx},${y2-w1/2} ${xe},${y2-w1/2}L${xe},${y2+w1/2}C${mx},${y2+w1/2} ${mx},${y1+w0/2} ${xs},${y1+w0/2}Z" fill="${n._col}" fill-opacity=".92"/>`;
+    }else{
+      const x1=p._x+d*p._w/2,mx=(x1+x2)/2;
+      E+=`<path d="M${x1},${y1}C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" stroke="${n._col}" stroke-width="${n._depth===2?2.4:1.8}" stroke-linecap="round" stroke-opacity=".9"/>`;
+    }
+  }
+  for(const n of vis){
+    const s=st(n._depth),x0=n._x-n._w/2,y0=n._y-n._h/2;
+    let g=`<g class="node" data-id="${n.id}">`,rx,tc;
+    if(n===R)rx=18;else if(n._depth===1)rx=n._h/2;else rx=11;
+    if(!exp&&n.id===sel)g+=`<rect x="${x0-5}" y="${y0-5}" width="${n._w+10}" height="${n._h+10}" rx="${rx+5}" fill="${U.sel}" fill-opacity=".1" stroke="${U.sel}" stroke-width="2.5"/>`;
+    if(!exp&&n.id===dropId)g+=`<rect x="${x0-7}" y="${y0-7}" width="${n._w+14}" height="${n._h+14}" rx="${rx+7}" fill="${U.sel}" fill-opacity=".14" stroke="${U.sel}" stroke-width="2" stroke-dasharray="6 4"/>`;
+    if(n===R){
+      tc=textOn(rootFill);
+      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="url(#rg)" stroke="${U.rootStroke}" stroke-width="1.5" filter="url(#sh2)"/>`;
+    }else if(n._depth===1){
+      tc=textOn(n._col);
+      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${n._col}" filter="url(#sh)"/>`;
+      g+=`<rect x="${x0+1.5}" y="${y0+1}" width="${n._w-3}" height="${n._h/2}" rx="${rx-1}" fill="#ffffff" fill-opacity=".1"/>`;
+    }else{
+      tc=U.fg;
+      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${U.nodeFill}" stroke="${n._col}" stroke-width="1.6" filter="url(#sh)"/>`;
+      g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${n._col}" fill-opacity="${U.tint}"/>`;
+    }
+    const lh=s.fs*1.32,top=n._y-(n._lines.length-1)*lh/2+s.fs*0.36;
+    g+=`<text font-family='${FONT}' font-size="${s.fs}" font-weight="${s.fw}" fill="${tc}" text-anchor="middle">`+
+      n._lines.map((l,i)=>`<tspan x="${n._x}" y="${top+i*lh}">${esc(l)}</tspan>`).join('')+'</text></g>';
+    if(n!==R&&n.children.length&&n.collapsed){
+      const tx=n._x+n._dir*(n._w/2+13);
+      g+=`<g class="node" data-toggle="${n.id}"><circle cx="${tx}" cy="${n._y}" r="12" fill="${U.nodeFill}" stroke="${n._col}" stroke-width="1.8" filter="url(#sh)"/><text x="${tx}" y="${n._y+3.8}" font-family='${FONT}' font-size="10.5" font-weight="800" fill="${n._col}" text-anchor="middle">${count(n)-1}</text></g>`;
+    }
+    N+=g;
+  }
+  return defs+E+N+(exp?'':handles(U));
+}
+function handles(U){
+  const n=byId[sel];if(!n||editing||n._x==null)return '';
+  const r=clamp(13/view.k,11,32),out=[];
+  const plus=(cx,cy,kind,tip)=>`<g class="hdl" data-add="${kind}"><title>${tip}</title><circle cx="${cx}" cy="${cy}" r="${r*1.5}" fill="transparent"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${U.sel}" stroke="${U.nodeFill}" stroke-width="${r*.16}" filter="url(#sh)"/><path d="M${cx-r*.45},${cy}h${r*.9}M${cx},${cy-r*.45}v${r*.9}" stroke="#fff" stroke-width="${r*.18}" stroke-linecap="round"/></g>`;
+  const del=(cx,cy)=>{const q=r*.82;return `<g class="hdl" data-add="del"><title>刪除這個主題</title><circle cx="${cx}" cy="${cy}" r="${q*1.5}" fill="transparent"/><circle cx="${cx}" cy="${cy}" r="${q}" fill="#ef4444" stroke="${U.nodeFill}" stroke-width="${q*.16}" filter="url(#sh)"/><path d="M${cx-q*.36},${cy-q*.36}l${q*.72},${q*.72}M${cx+q*.36},${cy-q*.36}l${-q*.72},${q*.72}" stroke="#fff" stroke-width="${q*.2}" stroke-linecap="round"/></g>`};
+  if(n===map.root){
+    out.push(plus(n._x+n._w/2+r*.5,n._y,'r','新增子主題'));
+    if(map.layout!=='right')out.push(plus(n._x-n._w/2-r*.5,n._y,'l','新增子主題'));
+  }else{
+    if(!(n.collapsed&&n.children.length))out.push(plus(n._x+n._dir*n._w/2,n._y,'child','新增子主題'));
+    out.push(plus(n._x,n._y+n._h/2+r*.5,'sib','新增同層主題'));
+    out.push(del(n._x+n._dir*(n._w/2-r*.2),n._y-n._h/2-r*.2));
+  }
+  return out.join('');
+}
+const svg=$('#svg'),stage=$('#stage');
+let lastK=1,hT;
+function applyView(){
+  const vp=$('#vp');if(vp)vp.setAttribute('transform',`translate(${view.x},${view.y}) scale(${view.k})`);
+  const g=24*view.k;stage.style.backgroundSize=`${g}px ${g}px`;stage.style.backgroundPosition=`${view.x}px ${view.y}px`;
+  $('#zPct').textContent=Math.round(view.k*100)+'%';
+  posEditor();
+  if(sel&&view.k!==lastK){clearTimeout(hT);hT=setTimeout(()=>{if(sel&&!editing&&!gest&&view.k!==lastK)render()},160)}
+}
+function render(){
+  layout();
+  if(sel&&!byId[sel])sel=map.root.id;
+  lastK=view.k;svg.innerHTML=`<g id="vp">${drawSVG(ui(),false)}</g>`;
+  applyView();updateBar();
+  if(document.activeElement!==$('#title'))$('#title').value=oneLine(map.root.text);
+  $('#bUndo').disabled=!undoS.length;$('#bRedo').disabled=!redoS.length;
+}
+function fit(full){
+  const b=bounds(),r=stage.getBoundingClientRect(),H=r.height-86;
+  let k=clamp(Math.min((r.width-56)/b.w,(H-40)/b.h),.2,1.15),cx=b.x+b.w/2,cy=b.y+b.h/2;
+  if(!full&&k<.55){k=.55;cx=map.root._x;cy=map.root._y}
+  view={k,x:r.width/2-cx*k,y:H/2-cy*k+6};applyView();
+}
+function ensureVisible(id){
+  const n=byId[id];if(!n)return;const r=stage.getBoundingClientRect(),k=view.k,m=30;
+  const x0=view.x+(n._x-n._w/2)*k,x1=view.x+(n._x+n._w/2)*k,y0=view.y+(n._y-n._h/2)*k,y1=view.y+(n._y+n._h/2)*k;
+  let dx=0,dy=0;
+  if(x0<m)dx=m-x0;else if(x1>r.width-m-50)dx=r.width-m-50-x1;
+  if(y0<m)dy=m-y0;else if(y1>r.height-100)dy=r.height-100-y1;
+  if(dx||dy){view.x+=dx;view.y+=dy;applyView()}
+}
+function zoomAt(sx,sy,f){const k=clamp(view.k*f,.15,3),wx=(sx-view.x)/view.k,wy=(sy-view.y)/view.k;view={k,x:sx-wx*k,y:sy-wy*k};applyView()}
+$('#zIn').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.width/2,r.height/2,1.25)};
+$('#zOut').onclick=()=>{const r=stage.getBoundingClientRect();zoomAt(r.width/2,r.height/2,.8)};
+$('#zFit').onclick=()=>fit(true);
+
+/* ---------- editing ---------- */
+const ed=$('#editor');
+function edit(id,isNew){
+  const n=byId[id];if(!n)return;closeMenus();
+  sel=id;editing={id,isNew:!!isNew,orig:n.text,snap:isNew?null:snap()};render();ensureVisible(id);
+  ed.value=n.text;ed.style.display='block';posEditor();ed.focus();ed.select();
+}
+function posEditor(){
+  if(!editing)return;const n=byId[editing.id];if(!n)return;
+  const s=st(n._depth),f=Math.max(view.k,16/s.fs),r=stage.getBoundingClientRect();
+  const w=Math.max(n._w+20,150)*f;
+  ed.style.width=w+'px';ed.style.fontSize=s.fs*f+'px';ed.style.fontWeight=s.fw;
+  ed.style.padding=`${s.py*f*0.8}px ${8*f}px`;
+  ed.style.height='auto';const h=ed.scrollHeight+4;ed.style.height=h+'px';
+  ed.style.left=(r.left+view.x+n._x*view.k-w/2)+'px';
+  ed.style.top=(r.top+view.y+n._y*view.k-h/2)+'px';
+}
+function finishEdit(cancel){
+  if(!editing)return;const e=editing;editing=null;ed.blur();ed.style.display='none';
+  const n=byId[e.id];if(!n){render();return}
+  const txt=ed.value.trim();
+  if(cancel||!txt){
+    if(e.isNew&&!e.orig){restore(undoS.pop());sel=parentOf[e.id]?.id||map.root.id;changed();return}
+    n.text=e.orig;render();return;
+  }
+  n.text=txt;
+  if(!e.isNew&&txt!==e.orig){undoS.push(e.snap);redoS=[]}
+  changed();ensureVisible(e.id);
+}
+ed.addEventListener('input',()=>{if(!editing)return;const n=byId[editing.id];if(n){n.text=ed.value;render();ensureVisible(n.id)}});
+ed.addEventListener('keydown',e=>{
+  if(e.isComposing||e.keyCode===229||!editing)return;
+  e.stopPropagation();
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finishEdit()}
+  else if(e.key==='Escape'){e.preventDefault();finishEdit(true)}
+  else if(e.key==='Tab'){e.preventDefault();const id=editing.id;finishEdit();if(byId[id]){sel=id;addChild()}}
+});
+ed.addEventListener('blur',()=>finishEdit());
+
+/* ---------- actions ---------- */
+function pickSide(){if(map.layout==='right')return 'r';let l=0,r=0;for(const c of map.root.children)(sideOf(c)==='l'?l+=count(c):r+=count(c));return r<=l?'r':'l'}
+function addChild(side){
+  const p=byId[sel]||map.root,n=mk('');
+  mutate(()=>{p.collapsed=false;if(p===map.root)n.side=side||pickSide();p.children.push(n)});
+  edit(n.id,true);
+}
+function addSibling(){
+  const cur=byId[sel];if(!cur||cur===map.root){addChild();return}
+  const p=parentOf[cur.id],n=mk('');
+  mutate(()=>{if(p===map.root)n.side=sideOf(cur);p.children.splice(p.children.indexOf(cur)+1,0,n)});
+  edit(n.id,true);
+}
+function delNode(){
+  const n=byId[sel];if(!n)return;
+  if(n===map.root){toast('中心主題不能刪除');return}
+  const p=parentOf[n.id],i=p.children.indexOf(n);
+  const next=p.children[i+1]||p.children[i-1];
+  sel=(next&&(p!==map.root||sideOf(next)===sideOf(n)))?next.id:p.id;
+  const label=oneLine(n.text)||'主題',cnt=count(n);
+  mutate(()=>p.children.splice(i,1));
+  toast(`已刪除「${label.length>10?label.slice(0,10)+'…':label}」${cnt>1?`（含 ${cnt-1} 個子主題）`:''}`,{label:'復原',fn:undo});
+}
+function moveSib(delta){
+  const n=byId[sel],p=n&&parentOf[n.id];if(!p)return;
+  const arr=p.children,same=arr.filter(c=>p!==map.root||sideOf(c)===sideOf(n));
+  const other=same[same.indexOf(n)+delta];if(!other)return;
+  mutate(()=>{const a=arr.indexOf(n),b=arr.indexOf(other);arr[a]=other;arr[b]=n});
+}
+function toggleCollapse(id){
+  const n=byId[id];if(!n||n===map.root||!n.children.length)return;
+  if(!n.collapsed){let x=byId[sel];while(x){if(x===n){sel=n.id;break}x=parentOf[x.id]}}
+  mutate(()=>{n.collapsed=!n.collapsed});
+}
+function canDrop(dragId,tid){if(!tid||tid===dragId)return false;let x=byId[tid];while(x){if(x.id===dragId)return false;x=parentOf[x.id]}return true}
+function reparent(dragId,tid,side){
+  const n=byId[dragId],op=parentOf[dragId],t=byId[tid];if(!n||!op||!t)return;
+  sel=dragId;
+  mutate(()=>{op.children.splice(op.children.indexOf(n),1);if(t===map.root)n.side=side;else delete n.side;t.collapsed=false;t.children.push(n)});
+}
+function nav(key){
+  const n=byId[sel],R=map.root;if(!n){sel=R.id;render();return}
+  const kids=x=>x.collapsed&&x!==R?[]:x.children;
+  const near=(x,dir)=>{const ks=kids(x).filter(c=>c._dir===dir);return ks.length?ks.reduce((b,c)=>Math.abs(c._y-x._y)<Math.abs(b._y-x._y)?c:b):null};
+  let t=null;
+  if(key==='ArrowRight'||key==='ArrowLeft'){const dir=key==='ArrowRight'?1:-1;t=n===R?near(R,dir):n._dir===dir?near(n,dir):parentOf[n.id]}
+  else{const p=parentOf[n.id];if(!p)return;const sibs=kids(p).filter(c=>c._dir===n._dir).sort((a,b)=>a._y-b._y);t=sibs[sibs.indexOf(n)+(key==='ArrowDown'?1:-1)]}
+  if(t){sel=t.id;render();ensureVisible(t.id)}
+}
+function act(a){
+  if(!byId[sel]){if(a==='child'||a==='sib')sel=map.root.id;else return}
+  ({child:()=>addChild(),sib:addSibling,edit:()=>edit(sel),color:openColor,up:()=>moveSib(-1),down:()=>moveSib(1),fold:()=>toggleCollapse(sel),del:delNode})[a]?.();
+}
+
+/* ---------- toolbar ---------- */
+const BAR=[['child','子主題'],['sib','同層'],['edit','編輯'],['color','顏色'],['up','上移'],['down','下移'],['fold','摺疊'],['del','刪除']];
+$('#bar').innerHTML=BAR.map(([a,l])=>`<button class="tb${a==='del'?' danger':''}" data-act="${a}"${a==='color'?' data-open':''}>${icon(a)}<span>${l}</span></button>`).join('');
+$('#bar').addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!b.disabled)act(b.dataset.act)});
+function updateBar(){
+  const n=byId[sel],isR=n===map.root,p=n&&parentOf[n.id];
+  const same=p?p.children.filter(c=>p!==map.root||sideOf(c)===sideOf(n)):[],i=same.indexOf(n);
+  const dis={child:false,sib:false,edit:!n,color:!n,up:!p||i<=0,down:!p||i>=same.length-1,fold:!n||isR||!n.children.length,del:!n||isR};
+  for(const b of $('#bar').children){const a=b.dataset.act;b.disabled=dis[a];
+    if(a==='fold'){const c=n&&n.collapsed;b.innerHTML=icon(c?'unfold':'fold')+`<span>${c?'展開':'摺疊'}</span>`}}
+}
+
+/* ---------- popovers ---------- */
+function closeMenus(){$('#menu').classList.remove('show');$('#colorpop').classList.remove('show')}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,[data-open]'))closeMenus()},true);
+function openColor(){
+  const n=byId[sel];if(!n)return;const pop=$('#colorpop');
+  if(pop.classList.contains('show')){closeMenus();return}
+  const cols=[...new Set([...th().levels,...PALETTE])].slice(0,14);
+  pop.innerHTML=[null,...cols].map(c=>`<button class="sw${(n.color||null)===c?' on':''}" data-c="${c||''}" style="background:${c||'transparent'}">${c?'':'自動'}</button>`).join('');
+  const b=$('#bar [data-act=color]').getBoundingClientRect();
+  pop.classList.add('show');
+  pop.style.left=clamp(b.left+b.width/2-pop.offsetWidth/2,8,innerWidth-pop.offsetWidth-8)+'px';
+  pop.style.top=(b.top-pop.offsetHeight-10)+'px';
+}
+$('#colorpop').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;const n=byId[sel];if(!n)return;
+  mutate(()=>{n.color=b.dataset.c||null});closeMenus()});
+
+const MENU=()=>[
+  ['theme','🎨','顏色主題…'],['sync','☁️','同步設定…'],'-',
+  ['png','🖼️','匯出圖片 (PNG)'],['outline','📋','複製大綱文字'],['import','📥','匯入大綱文字／檔案'],['backup','💾','備份（全部心智圖）'],'-',
+  ['layout',map.layout==='right'?'↔️':'➡️',map.layout==='right'?'版面：改為左右平衡':'版面：改為全部向右'],
+  ['expand','➕','全部展開'],['collapse','➖','全部摺疊到第一層'],'-',['help','❓','使用說明']];
+function openMenu(){
+  const m=$('#menu');if(m.classList.contains('show')){closeMenus();return}
+  closeMenus();
+  m.innerHTML=MENU().map(x=>x==='-'?'<hr>':`<button data-m="${x[0]}"><span>${x[1]}</span><span>${x[2]}</span></button>`).join('')+`<div class="ver">心智圖 ${VERSION}</div>`;
+  m.classList.add('show');
+}
+$('#bMore').onclick=openMenu;
+$('#menu').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;closeMenus();const k=b.dataset.m;
+  ({theme:showTheme,sync:showSync,png:exportPNG,outline:showOutline,import:showImport,backup:showBackup,help:showHelp,
+    layout:()=>mutate(()=>{if(map.layout==='right'){map.layout='both';balanceSides(map.root)}else map.layout='right'}),
+    expand:()=>mutate(()=>{(function w(n){n.collapsed=false;n.children.forEach(w)})(map.root)}),
+    collapse:()=>{sel=map.root.id;mutate(()=>{map.root.children.forEach(c=>{if(c.children.length)c.collapsed=true})})}
+  })[k]?.();
+  if(k==='layout'||k==='expand'||k==='collapse')setTimeout(fit,0);
+});
+$('#bTheme').onclick=showTheme;
+$('#bSync').onclick=showSync;
+
+/* ---------- dialogs ---------- */
+function dialog({title,body,buttons=[],onClose,sheet}){
+  const ov=document.createElement('div');ov.className='ov'+(sheet?' sheet':'');
+  ov.innerHTML=`<div class="dlg" role="dialog"><h3>${esc(title)}</h3><div class="db"></div><div class="df"></div></div>`;
+  const dbx=ov.querySelector('.db'),df=ov.querySelector('.df');
+  if(typeof body==='string')dbx.innerHTML=body;else dbx.appendChild(body);
+  let closed=false;const close=()=>{if(closed)return;closed=true;ov.remove();onClose&&onClose()};
+  for(const b of buttons){const el=document.createElement('button');el.className='btn '+(b.cls||'');el.textContent=b.label;
+    el.onclick=async()=>{const r=b.onClick?await b.onClick(ov):undefined;if(r!==false)close()};df.appendChild(el)}
+  ov.addEventListener('pointerdown',e=>{if(e.target===ov)close()});
+  ov._close=close;document.body.appendChild(ov);return ov;
+}
+function confirmDlg(msg,ok,danger){return new Promise(res=>{dialog({title:'確認',body:`<p>${esc(msg)}</p>`,
+  buttons:[{label:'取消',onClick:()=>res(false)},{label:ok||'確定',cls:danger?'danger':'primary',onClick:()=>res(true)}],onClose:()=>res(false)})})}
+
+function showTheme(){
+  const w=document.createElement('div');
+  const draw=()=>{
+    w.innerHTML=`<div class="seg">${[['level','依層級上色'],['branch','依分支上色']].map(([k,l])=>`<button data-cm="${k}" class="${cmode()===k?'on':''}">${l}</button>`).join('')}</div>
+<div class="themes">${Object.entries(THEMES).map(([k,t])=>`<button class="thc${map.theme===k?' on':''}" data-th="${k}"><span class="thp"><i style="background:${t.root}"></i>${t.levels.slice(0,4).map(c=>`<b style="background:${c}"></b>`).join('')}</span><span>${t.name}</span></button>`).join('')}</div>
+<p class="muted">主題會跟著這張心智圖一起儲存、同步；新的心智圖會沿用最後選的主題。個別主題仍可用「顏色」按鈕單獨換色。</p>`;
+  };
+  draw();
+  w.addEventListener('click',e=>{
+    const a=e.target.closest('[data-th]'),c=e.target.closest('[data-cm]');
+    if(a&&a.dataset.th!==map.theme){LS.set('mm.theme',a.dataset.th);mutate(()=>{map.theme=a.dataset.th});draw()}
+    if(c&&c.dataset.cm!==cmode()){mutate(()=>{map.colorMode=c.dataset.cm});draw()}
+  });
+  dialog({title:'顏色主題',body:w,sheet:true,buttons:[{label:'完成',cls:'primary'}]});
+}
+async function exportPNG(){
+  layout();
+  const U=UI.light,b=bounds(),pad=48,W=Math.ceil(b.w+pad*2),H=Math.ceil(b.h+pad*2);
+  const s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${b.x-pad} ${b.y-pad} ${W} ${H}"><rect x="${b.x-pad}" y="${b.y-pad}" width="${W}" height="${H}" fill="#ffffff"/>${drawSVG(U,true)}</svg>`;
+  const img=new Image();img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);
+  try{await img.decode()}catch(e){toast('圖片產生失敗');return}
+  const sc=Math.min(2,8000/W,8000/H),c=document.createElement('canvas');
+  c.width=Math.round(W*sc);c.height=Math.round(H*sc);
+  const x=c.getContext('2d');x.scale(sc,sc);x.drawImage(img,0,0,W,H);
+  let url;try{url=c.toDataURL('image/png')}catch(e){toast('這個瀏覽器無法匯出圖片');return}
+  const blob=await new Promise(r=>c.toBlob(r,'image/png'));
+  const name=safeName(map.root.text)+'.png';
+  dialog({title:'匯出圖片',body:`<img src="${url}" alt="心智圖"><p class="muted">如果按「下載」沒有反應，請在圖片上長按（手機）或按右鍵（電腦）選擇「儲存圖片」。</p>`,
+    buttons:[{label:'關閉'},{label:'下載',cls:'primary',onClick:()=>{if(blob)saveFile(name,blob);return false}}]});
+}
+function toOutline(n,d=0){
+  const line=d===0?'# '+oneLine(n.text):'  '.repeat(d-1)+'- '+oneLine(n.text);
+  return [line,...n.children.map(c=>toOutline(c,d+1))].join('\n');
+}
+function textBox(val,rows){const t=document.createElement('textarea');t.rows=rows||12;t.value=val;t.readOnly=true;t.addEventListener('focus',()=>t.select());return t}
+function showOutline(){
+  const txt=toOutline(map.root),w=document.createElement('div');
+  w.innerHTML='<p class="muted">可以貼到 Word、Google 文件、筆記，或請 AI 延伸內容。</p>';w.appendChild(textBox(txt));
+  dialog({title:'大綱文字',body:w,buttons:[{label:'關閉'},{label:'複製',cls:'primary',onClick:()=>{copyText(txt);return false}}]});
+}
+function showBackup(){
+  const txt=JSON.stringify({app:'mindmap',version:2,exported:new Date().toISOString(),maps},strip);
+  const d=new Date(),name=`心智圖備份-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.json`;
+  const w=document.createElement('div');
+  w.innerHTML=`<p>共 ${maps.length} 張心智圖，檔名 <b>${esc(name)}</b>。</p><p class="muted">如果下載沒有反應，可以按「複製」把內容貼到記事本，存成 .json 檔。還原時用「匯入大綱文字／檔案」。</p>`;
+  w.appendChild(textBox(txt,6));
+  dialog({title:'備份',body:w,buttons:[{label:'關閉'},{label:'複製',onClick:()=>{copyText(txt);return false}},{label:'下載',cls:'primary',onClick:()=>{saveFile(name,new Blob([txt],{type:'application/json'}));return false}}]});
+}
+function showHelp(){
+  dialog({title:'使用說明',body:`<table class="keys">
+<tr><td>選取</td><td>點一下主題</td></tr>
+<tr><td>新增子主題</td><td>選取後按主題外側的藍色 <b>＋</b>；或按 <kbd>Tab</kbd>（編輯中也可以）</td></tr>
+<tr><td>新增同層</td><td>按主題下方的藍色 <b>＋</b>；或按 <kbd>Enter</kbd></td></tr>
+<tr><td>刪除</td><td>按主題角落的紅色 <b>×</b>；或按 <kbd>Delete</kbd>。刪錯了按提示上的「復原」</td></tr>
+<tr><td>修改文字</td><td>點兩下主題，或按「編輯」／<kbd>F2</kbd>；<kbd>Enter</kbd> 完成、<kbd>Shift</kbd>+<kbd>Enter</kbd> 換行</td></tr>
+<tr><td>搬移主題</td><td>按住主題拖到另一個主題上；拖到中心主題的左邊或右邊可換邊</td></tr>
+<tr><td>顏色主題</td><td>右上角調色盤：7 種配色，可選依層級或依分支上色</td></tr>
+<tr><td>移動畫面</td><td>拖曳空白處；兩指或滾輪縮放；右下角 ＋／－／置中</td></tr>
+<tr><td>同步</td><td>右上角雲朵。claude.ai 版自動用 Claude 帳號同步；GitHub Pages 版第一次要貼 GitHub 金鑰</td></tr>
+<tr><td>復原／重做</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd>／<kbd>Ctrl</kbd>+<kbd>Y</kbd></td></tr>
+</table>`,buttons:[{label:'知道了',cls:'primary'}]});
+}
+
+/* ---------- import ---------- */
+function importJSON(txt){
+  let o;try{o=JSON.parse(txt)}catch(e){toast('檔案格式不正確');return false}
+  const arr=(o&&Array.isArray(o.maps))?o.maps:Array.isArray(o)?o:[o];
+  const ok=arr.filter(m=>m&&m.root&&typeof m.root==='object').map(m=>Object.assign({id:uid(),root:san(m.root),updated:Date.now()},cleanMeta(m)));
+  if(!ok.length){toast('找不到心智圖資料');return false}
+  maps.push(...ok);ok.forEach(m=>save(m));switchMap(ok[0].id);toast(`已匯入 ${ok.length} 張心智圖`);return true;
+}
+function parseOutline(txt){
+  const items=[];let base=0,stk=[];
+  for(const raw of txt.replace(/\r/g,'').split('\n')){
+    if(!raw.trim())continue;
+    const m=raw.match(/^([ \t　]*)(#{1,6}\s+|[-*+•‧·]\s+|\d+[.)、]\s*)?(.*)$/);
+    const ind=m[1].replace(/\t/g,'    ').replace(/　/g,'  ').length,mark=m[2]||'';
+    const text=m[3].replace(/\*\*(.+?)\*\*/g,'$1').replace(/__(.+?)__/g,'$1').trim();if(!text)continue;
+    let lvl;
+    if(mark.startsWith('#')){lvl=mark.trim().length-1;base=lvl+1;stk=[]}
+    else{while(stk.length&&stk[stk.length-1]>ind)stk.pop();if(!stk.length||stk[stk.length-1]<ind)stk.push(ind);lvl=base+stk.length-1}
+    items.push({lvl,text});
+  }
+  if(!items.length)return null;
+  const vroot=mk(''),s2=[vroot];
+  for(const it of items){const L=Math.min(it.lvl,s2.length-1),p=s2[L],n=mk(it.text);p.children.push(n);s2.length=L+1;s2.push(n)}
+  const root=vroot.children.length===1?vroot.children[0]:Object.assign(mk('中心主題'),{children:vroot.children});
+  balanceSides(root);return root;
+}
+function showImport(){
+  const w=document.createElement('div');
+  w.innerHTML=`<p class="muted">貼上條列式大綱（用空白或 Tab 縮排，或 Markdown 的 <b>#</b> 與 <b>-</b>），會產生一張新的心智圖。也可以先請 AI 幫你列好大綱再貼進來。</p>
+<textarea rows="10" placeholder="光合作用&#10;  需要的材料&#10;    陽光&#10;    水&#10;    二氧化碳&#10;  產物&#10;    葡萄糖&#10;    氧氣"></textarea>
+<p><label class="btn" style="font-weight:500">📂 選擇檔案（備份檔 .json／.txt／.md）<input type="file" accept=".json,.txt,.md,application/json,text/plain,text/markdown" hidden></label></p>`;
+  const ta=w.querySelector('textarea'),fi=w.querySelector('input');
+  const ov=dialog({title:'匯入',body:w,buttons:[{label:'取消'},{label:'產生心智圖',cls:'primary',onClick:()=>{
+    const t=ta.value.trim();if(!t){toast('請先貼上大綱文字');return false}
+    if(/^[\[{]/.test(t))return importJSON(t);
+    const root=parseOutline(t);if(!root){toast('讀不到內容');return false}
+    const m=Object.assign(blankMap(),{root});maps.push(m);save(m);switchMap(m.id);toast(`已產生 ${count(root)} 個主題`);
+  }}]});
+  fi.onchange=async()=>{const f=fi.files[0];if(!f)return;const t=await f.text();
+    if(/\.json$/i.test(f.name)||/^\s*[\[{]/.test(t)){if(importJSON(t))ov._close()}else ta.value=t};
+  setTimeout(()=>ta.focus(),50);
+}
+
+/* ---------- maps drawer ---------- */
+function renderDrawer(){
+  const list=[...maps].sort((a,b)=>(b.updated||0)-(a.updated||0));
+  $('#dlist').innerHTML=list.map(m=>{const t=th(m);return `<div class="mi${m===map?' on':''}" data-map="${m.id}"><span class="strip">${[t.root,...t.levels.slice(0,3)].map(c=>`<i style="background:${c}"></i>`).join('')}</span><div class="mt"><b>${esc(oneLine(m.root.text)||'未命名')}</b><small>${count(m.root)} 個主題 · ${fmtDate(m.updated)}</small></div><button class="ib" data-dup="${m.id}" title="複製一份">${icon('copy')}</button><button class="ib" data-delmap="${m.id}" title="刪除">${icon('del')}</button></div>`}).join('');
+}
+function openDrawer(){renderDrawer();$('#drawer').classList.add('open');$('#scrim').classList.add('show')}
+function closeDrawer(){$('#drawer').classList.remove('open');$('#scrim').classList.remove('show')}
+function switchMap(id){
+  finishEdit();const m=maps.find(x=>x.id===id);if(!m)return;
+  map=m;undoS=[];redoS=[];sel=map.root.id;persistLocal();render();fit();
+}
+$('#bDrawer').onclick=openDrawer;$('#bCloseDrawer').onclick=closeDrawer;$('#scrim').onclick=closeDrawer;
+$('#newmap').onclick=()=>{const m=blankMap();maps.push(m);save(m);closeDrawer();switchMap(m.id);edit(m.root.id)};
+$('#dlist').addEventListener('click',async e=>{
+  const dup=e.target.closest('[data-dup]'),del=e.target.closest('[data-delmap]'),it=e.target.closest('[data-map]');
+  if(dup){const src=maps.find(m=>m.id===dup.dataset.dup);const m=Object.assign({id:uid(),root:san(JSON.parse(JSON.stringify(src.root,strip)))},cleanMeta(src));
+    m.root.text=oneLine(m.root.text)+'（副本）';maps.push(m);save(m);renderDrawer();toast('已複製一份');return}
+  if(del){const m=maps.find(x=>x.id===del.dataset.delmap);
+    if(!await confirmDlg(`確定要刪除「${oneLine(m.root.text)||'未命名'}」嗎？刪除後無法復原（其他同步的裝置也會一起刪除）。`,'刪除',true))return;
+    maps=maps.filter(x=>x!==m);deleted[m.id]=Date.now();queueUpload(m.id);
+    if(!maps.length){const b=blankMap();maps.push(b);save(b)}
+    if(m===map)switchMap(newestMap().id);else persistLocal();renderDrawer();return}
+  if(it){closeDrawer();if(it.dataset.map!==map.id)switchMap(it.dataset.map)}
+});
+
+/* ---------- title ---------- */
+const titleEl=$('#title');
+titleEl.addEventListener('change',()=>{const v=titleEl.value.trim();if(!v||v===oneLine(map.root.text)){titleEl.value=oneLine(map.root.text);return}mutate(()=>{map.root.text=v})});
+titleEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&e.keyCode!==229)titleEl.blur()});
+$('#bUndo').onclick=undo;$('#bRedo').onclick=redo;
+
+/* ---------- pointer: pan / pinch / tap / drag ---------- */
+const ptrs=new Map();let lastTap={id:null,t:0};const ghost=$('#ghost');
+const rel=e=>{const r=stage.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+function endDrag(){ghost.style.display='none';if(dropId){dropId=null;render()}}
+stage.addEventListener('pointerdown',e=>{
+  if(editing)finishEdit();
+  if(document.activeElement===titleEl)titleEl.blur();
+  try{stage.setPointerCapture(e.pointerId)}catch(_){}
+  ptrs.set(e.pointerId,rel(e));
+  if(ptrs.size===2){
+    if(gest&&gest.type==='drag')endDrag();
+    const [a,b]=[...ptrs.values()],c={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    gest={type:'pinch',d:Math.hypot(a.x-b.x,a.y-b.y)||1,k:view.k,wx:(c.x-view.x)/view.k,wy:(c.y-view.y)/view.k};return;
+  }
+  if(ptrs.size>2)return;
+  const ad=e.target.closest('[data-add]'),tg=e.target.closest('[data-toggle]'),nd=e.target.closest('[data-id]'),p=rel(e);
+  gest={type:ad?'add':tg?'toggle':nd?'node':'pan',id:ad?ad.dataset.add:tg?tg.dataset.toggle:nd?nd.dataset.id:null,sx:p.x,sy:p.y,vx:view.x,vy:view.y,moved:false};
+});
+stage.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId)||!gest)return;
+  const p=rel(e);ptrs.set(e.pointerId,p);
+  if(gest.type==='pinch'){
+    if(ptrs.size<2)return;const [a,b]=[...ptrs.values()],c={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    const k=clamp(gest.k*Math.hypot(a.x-b.x,a.y-b.y)/gest.d,.15,3);view={k,x:c.x-gest.wx*k,y:c.y-gest.wy*k};applyView();return;
+  }
+  const dx=p.x-gest.sx,dy=p.y-gest.sy,far=Math.hypot(dx,dy)>7;
+  if(gest.type==='pan'){if(far||gest.moved){gest.moved=true;stage.classList.add('panning');view.x=gest.vx+dx;view.y=gest.vy+dy;applyView()}return}
+  if(gest.type==='toggle'||gest.type==='add'){if(far)gest.type='none';return}
+  if(gest.type==='node'&&far){
+    if(gest.id===map.root.id){gest={...gest,type:'pan',moved:true};return}
+    gest.type='drag';const n=byId[gest.id];ghost.textContent=oneLine(n&&n.text)||'（空白）';ghost.style.display='block';
+  }
+  if(gest.type==='drag'){
+    ghost.style.left=(e.clientX+14)+'px';ghost.style.top=(e.clientY+10)+'px';
+    const el=document.elementFromPoint(e.clientX,e.clientY),t=el&&el.closest&&el.closest('[data-id]');
+    const tid=t&&canDrop(gest.id,t.dataset.id)?t.dataset.id:null;
+    gest.side=(p.x-view.x)/view.k<map.root._x?'l':'r';
+    if(tid!==dropId){dropId=tid;render()}
+  }
+});
+function pointerEnd(e){
+  if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
+  stage.classList.remove('panning');
+  if(!gest)return;
+  if(gest.type==='pinch'){if(!ptrs.size){gest=null;if(sel)render()}return}
+  const g=gest;gest=null;
+  if(e.type==='pointercancel'){if(g.type==='drag')endDrag();return}
+  if(g.type==='pan'&&!g.moved){if(sel){sel=null;render()}}
+  else if(g.type==='node'){
+    const now=Date.now();
+    if(lastTap.id===g.id&&now-lastTap.t<380){lastTap={id:null,t:0};edit(g.id)}
+    else{lastTap={id:g.id,t:now};if(sel!==g.id){sel=g.id;render()}}
+  }
+  else if(g.type==='toggle')toggleCollapse(g.id);
+  else if(g.type==='add'){if(g.id==='sib')addSibling();else if(g.id==='del')delNode();else addChild(g.id==='l'||g.id==='r'?g.id:undefined)}
+  else if(g.type==='drag'){
+    const tid=dropId;ghost.style.display='none';dropId=null;
+    if(tid&&canDrop(g.id,tid))reparent(g.id,tid,g.side);else render();
+  }
+}
+stage.addEventListener('pointerup',pointerEnd);stage.addEventListener('pointercancel',pointerEnd);
+stage.addEventListener('wheel',e=>{e.preventDefault();const p=rel(e);
+  const mouseWheel=e.deltaMode!==0||(e.deltaX===0&&Math.abs(e.deltaY)>=50);
+  if(e.ctrlKey||e.metaKey||mouseWheel)zoomAt(p.x,p.y,Math.exp(-clamp(e.deltaMode?e.deltaY*33:e.deltaY,-120,120)*(e.ctrlKey?0.01:0.0015)));
+  else{view.x-=e.deltaX;view.y-=e.deltaY;applyView()}
+},{passive:false});
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown',e=>{
+  const ov=document.querySelector('.ov');
+  if(ov){if(e.key==='Escape')ov._close();return}
+  if(editing)return;
+  const tag=document.activeElement&&document.activeElement.tagName;if(tag==='INPUT'||tag==='TEXTAREA')return;
+  const mod=e.ctrlKey||e.metaKey,k=e.key;
+  if(mod&&k.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo();return}
+  if(mod&&k.toLowerCase()==='y'){e.preventDefault();redo();return}
+  if(mod||e.altKey)return;
+  if(k==='Tab'){e.preventDefault();act('child')}
+  else if(k==='Enter'){e.preventDefault();act('sib')}
+  else if(k==='Delete'||k==='Backspace'){e.preventDefault();act('del')}
+  else if(k==='F2'||k===' '){e.preventDefault();act('edit')}
+  else if(k.startsWith('Arrow')){e.preventDefault();nav(k)}
+  else if(k==='Escape'){closeMenus();closeDrawer()}
+});
+
+/* ---------- init ---------- */
+mq.addEventListener&&mq.addEventListener('change',render);
+addEventListener('resize',()=>applyView());
+window.visualViewport&&visualViewport.addEventListener('resize',posEditor);
+setSync('setup');
+render();fit();
+if(firstRun){persistLocal();setTimeout(()=>toast('點一下主題，用藍色 ＋ 新增、紅色 × 刪除'),500)}
+setTimeout(initSync,0);
+
+/* ---------- installable app (GitHub Pages): offline + update notice ---------- */
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')&&!window.claude){
+  const hadController=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service Worker 註冊失敗:',err));
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(hadController)toast('已下載新版本',{label:'重新載入',fn:()=>{finishEdit();persistLocal();setTimeout(()=>location.reload(),300)}});
+  });
+}
+</script>
+</body>
+</html>
