@@ -160,7 +160,7 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 
 <script>
 'use strict';
-const VERSION='v1.4.0';
+const VERSION='v1.4.1';
 const $=s=>document.querySelector(s);
 const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
 
@@ -612,9 +612,14 @@ ${[...new Set(vis.filter(n=>n._depth===1).map(n=>n._col))].map(c=>`<linearGradie
       const bx=n===R?x0+8:n._x-n._dir*(n._w/2-8),by=y0+1;
       g+=`<g class="node" data-note="${n.id}"><title>${esc(n.note.slice(0,200))}</title><circle cx="${bx}" cy="${by}" r="13" fill="transparent"/><circle cx="${bx}" cy="${by}" r="8" fill="#f59e0b" stroke="${U.nodeFill}" stroke-width="1.6"/><path d="M${bx-3.4},${by-2.3}h6.8M${bx-3.4},${by+.2}h6.8M${bx-3.4},${by+2.7}h4.2" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></g>`;
     }
-    if(n!==R&&n.children.length&&n.collapsed){
-      const tx=n._x+n._dir*(n._w/2+13);
-      g+=`<g class="node" data-toggle="${n.id}"><circle cx="${tx}" cy="${n._y}" r="12" fill="${U.nodeFill}" stroke="${n._col}" stroke-width="1.8" filter="url(#sh)"/><text x="${tx}" y="${n._y+3.8}" font-family='${FONT}' font-size="10.5" font-weight="800" fill="${n._col}" text-anchor="middle">${count(n)-1}</text></g>`;
+    if(n!==R&&n.children.length){
+      const rt=clamp(n._h*.27,8,11),tx=n._x+n._dir*(n._w/2+rt+2),ty=n._y;
+      if(n.collapsed){
+        const c=count(n)-1;
+        g+=`<g class="node" data-toggle="${n.id}"><title>展開（${c} 個子主題）</title><circle cx="${tx}" cy="${ty}" r="${rt*2}" fill="transparent"/><circle cx="${tx}" cy="${ty}" r="${rt}" fill="${n._col}" stroke="${U.nodeFill}" stroke-width="1.6" filter="url(#sh)"/><text x="${tx}" y="${ty+rt*.36}" font-family='${FONT}' font-size="${c>99?rt*.78:rt}" font-weight="800" fill="${textOn(n._col)}" text-anchor="middle">${c}</text></g>`;
+      }else if(!exp){
+        g+=`<g class="node" data-toggle="${n.id}"><title>摺疊</title><circle cx="${tx}" cy="${ty}" r="${rt*2}" fill="transparent"/><circle cx="${tx}" cy="${ty}" r="${rt}" fill="${U.nodeFill}" stroke="${n._col}" stroke-width="1.6"/><path d="M${tx-rt*.45},${ty}h${rt*.9}" stroke="${n._col}" stroke-width="${rt*.24}" stroke-linecap="round"/></g>`;
+      }
     }
     N+=g;
   }
@@ -629,7 +634,8 @@ function handles(U){
     out.push(plus(n._x+n._w/2+r*.5,n._y,'r','新增子主題'));
     if(map.layout!=='right')out.push(plus(n._x-n._w/2-r*.5,n._y,'l','新增子主題'));
   }else{
-    if(!(n.collapsed&&n.children.length))out.push(plus(n._x+n._dir*n._w/2,n._y,'child','新增子主題'));
+    if(n.children.length)out.push(plus(n._x+n._dir*n._w/2,n._y+n._h/2,'child','新增子主題'));
+    else out.push(plus(n._x+n._dir*n._w/2,n._y,'child','新增子主題'));
     out.push(plus(n._x,n._y+n._h/2+r*.5,'sib','新增同層主題'));
     out.push(del(n._x+n._dir*(n._w/2-r*.2),n._y-n._h/2-r*.2));
   }
@@ -888,6 +894,7 @@ function showHelp(){
 <tr><td>註記</td><td>按下方「註記」或主題角落的黃色圖示，寫下想法、回饋；會記錄建立與修改時間</td></tr>
 <tr><td>回顧</td><td>右上 ⋮ →「回顧清單」：依時間列出所有主題與註記，點一下跳到該主題；也可以在主題下方顯示建立時間</td></tr>
 <tr><td>修改文字</td><td>點兩下主題，或按「編輯」／<kbd>F2</kbd>；<kbd>Enter</kbd> 完成、<kbd>Shift</kbd>+<kbd>Enter</kbd> 換行</td></tr>
+<tr><td>摺疊／展開</td><td>按主題外側的小圓鈕：「−」摺疊分支，摺疊後顯示子主題數量，再按一下展開；鍵盤 <kbd>/</kbd></td></tr>
 <tr><td>搬移主題</td><td>按住主題拖到另一個主題上；拖到中心主題的左邊或右邊可換邊</td></tr>
 <tr><td>顏色主題</td><td>右上角調色盤：14 種配色，可選依層級或依分支上色</td></tr>
 <tr><td>移動畫面</td><td>拖曳空白處；兩指或滾輪縮放；右下角 ＋／－／置中</td></tr>
@@ -1119,6 +1126,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='Enter'){e.preventDefault();act('sib')}
   else if(k==='Delete'||k==='Backspace'){e.preventDefault();act('del')}
   else if(k==='F2'||k===' '){e.preventDefault();act('edit')}
+  else if(k==='/'){e.preventDefault();act('fold')}
   else if(k.startsWith('Arrow')){e.preventDefault();nav(k)}
   else if(k==='Escape'){closeMenus();closeDrawer();closeNote()}
 });
