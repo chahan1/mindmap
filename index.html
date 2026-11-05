@@ -184,9 +184,10 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 
 <script>
 'use strict';
-const VERSION='v1.6.2';
+const VERSION='v1.6.3';
 const VERSION_DATE='2026-11-05';
 const CHANGELOG=[
+  ['v1.6.3','修正手機點兩下修改主題時，語音輸入沒有啟動'],
   ['v1.6.2','修正 Android 手機語音輸入；新增「語音測試」'],
   ['v1.6.1','左上角顯示版本號；「關於」視窗可檢查更新'],
   ['v1.6.0','26 組鮮明配色；主題改為立體樣式（厚度、亮面、陰影），可切換平面'],
@@ -790,8 +791,16 @@ ed.addEventListener('keydown',e=>{
   else if(e.key==='Tab'){e.preventDefault();const id=editing.id;finishEdit();if(byId[id]){sel=id;addChild()}}
 });
 ed.addEventListener('blur',e=>{if(suppressBlur||(e.relatedTarget&&vb.contains(e.relatedTarget)))return;finishEdit()});
-let selfFocus=false;
-ed.addEventListener('focus',()=>{if(!selfFocus&&rec&&recState&&recState.mode==='topic'){stopVoice();hideVB()}});
+let selfFocus=false,tapEditAt=0;
+/* On phones the editor opens right under the finger; the browser then sends a "ghost" click to it,
+   which would focus it (keyboard pops up) and stop the microphone. Cancel that click, and ignore
+   a focus that arrives just after the editor opened by a tap. */
+stage.addEventListener('touchend',e=>{if(Date.now()-tapEditAt<600&&e.cancelable)e.preventDefault()},{passive:false});
+ed.addEventListener('focus',()=>{
+  if(selfFocus||!rec||!recState||recState.mode!=='topic')return;
+  if(Date.now()-tapEditAt<900&&matchMedia('(pointer:coarse)').matches){suppressBlur=true;ed.blur();suppressBlur=false;return}
+  stopVoice();hideVB();
+});
 
 /* ---------- voice input (speech first, typing as fallback) ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -1242,7 +1251,7 @@ function pointerEnd(e){
   if(g.type==='pan'&&!g.moved){if(sel){sel=null;render()}}
   else if(g.type==='node'){
     const now=Date.now();
-    if(lastTap.id===g.id&&now-lastTap.t<380){lastTap={id:null,t:0};edit(g.id)}
+    if(lastTap.id===g.id&&now-lastTap.t<380){lastTap={id:null,t:0};tapEditAt=now;edit(g.id)}
     else{lastTap={id:g.id,t:now};if(sel!==g.id){sel=g.id;render()}}
   }
   else if(g.type==='toggle')toggleCollapse(g.id);
