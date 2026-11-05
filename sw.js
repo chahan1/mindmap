@@ -1,6 +1,6 @@
 // 心智圖 - Service Worker（讓 App 可離線開啟）
 // 更新程式後，把版本號改掉，使用者下次開啟就會拿到新版
-const CACHE_NAME = 'mindmap-v1.4.1';
+const CACHE_NAME = 'mindmap-v1.5.0';
 const APP_FILES = [
   './',
   './index.html',
