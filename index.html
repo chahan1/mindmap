@@ -184,9 +184,10 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 
 <script>
 'use strict';
-const VERSION='v1.6.1';
+const VERSION='v1.6.2';
 const VERSION_DATE='2026-11-05';
 const CHANGELOG=[
+  ['v1.6.2','修正 Android 手機語音輸入；新增「語音測試」'],
   ['v1.6.1','左上角顯示版本號；「關於」視窗可檢查更新'],
   ['v1.6.0','26 組鮮明配色；主題改為立體樣式（厚度、亮面、陰影），可切換平面'],
   ['v1.5.0','語音優先輸入，聽不到時自動改打字；註記可語音輸入'],
@@ -825,36 +826,56 @@ function stopVoice(){
   if(rec){const r=rec;rec=null;try{r.abort()}catch(e){}}
   ed.classList.remove('listening');$('#npMic').classList.remove('on');
 }
+const isAndroid=/Android/i.test(navigator.userAgent);
+let lastStop=0;
+/* Android Chrome is reliable only with final results (no interim) and with Chrome deciding when to stop,
+   so: interim results off on Android, no early stop while the permission prompt may be open,
+   and a short pause before restarting so the microphone is released. */
 function startVoiceTopic(){
   stopVoice();
+  const wait=Math.max(0,350-(Date.now()-lastStop));
+  if(wait){ed.classList.add('listening');showVB('listening','準備中…');setTimeout(()=>{if(editing)startVoiceTopic()},wait);return}
   if(document.activeElement===ed){suppressBlur=true;ed.blur();suppressBlur=false}
   let r;try{r=new SR()}catch(e){voiceFail('start');return}
-  r.lang=voiceLang;r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
-  rec=r;recState={mode:'topic',got:false,final:'',err:null,orig:ed.value};
-  ed.classList.add('listening');showVB('listening');
+  r.lang=voiceLang;r.interimResults=!isAndroid;r.continuous=false;r.maxAlternatives=1;
+  rec=r;recState={mode:'topic',got:false,final:'',err:null,orig:ed.value,started:false};
+  ed.classList.add('listening');showVB('listening',isAndroid?'請說出主題內容…（聽到「嗶」聲後說話）':'請說出主題內容…');
   if(!matchMedia('(pointer:coarse)').matches){selfFocus=true;ed.focus();ed.select();selfFocus=false}
+  const arm=ms=>{clearTimeout(recState.timer);recState.timer=setTimeout(()=>{if(rec===r&&!recState.got){recState.err='no-speech';try{r.stop()}catch(e){}}},ms)};
+  r.onstart=()=>{if(rec!==r)return;recState.started=true;arm(12000)};
   r.onresult=e=>{
     if(rec!==r||!editing)return;
-    let fin='',intm='';for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t;else intm+=t}
-    const txt=cleanSpeech(fin+intm);if(!txt)return;
-    recState.got=true;clearTimeout(recState.timer);if(fin)recState.final=cleanSpeech(fin);
+    let txt='',fin=false;
+    if(isAndroid){const last=e.results[e.results.length-1];txt=last[0].transcript;fin=last.isFinal}
+    else{let f='',m='';for(let i=0;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)f+=t;else m+=t}txt=f+m;fin=!!f&&!m}
+    txt=cleanSpeech(txt);if(!txt)return;
+    recState.got=true;clearTimeout(recState.timer);if(fin)recState.final=txt;
     ed.value=txt;const n=byId[editing.id];if(n){n.text=txt;render();ensureVisible(n.id)}
     $('#vbMsg').textContent='聽到了：'+txt;if(document.activeElement===ed)ed.setSelectionRange(txt.length,txt.length);
   };
-  r.onerror=e=>{if(rec===r)recState.err=e.error};
+  r.onerror=e=>{if(rec===r&&e.error!=='aborted')recState.err=e.error};
   r.onend=()=>{
-    if(rec!==r)return;rec=null;clearTimeout(recState.timer);ed.classList.remove('listening');
+    if(rec!==r)return;rec=null;lastStop=Date.now();clearTimeout(recState.timer);ed.classList.remove('listening');
     if(!editing){hideVB();return}
     if(recState.got&&ed.value.trim())showVB('done','辨識完成：可以按「完成」，或再說一次');
     else voiceFail(recState.err||'no-speech');
   };
-  recState.timer=setTimeout(()=>{if(rec===r&&!recState.got){recState.err='no-speech';try{r.stop()}catch(e){}}},7000);
+  arm(25000); // safety net only: Chrome normally ends by itself; long enough for the first permission prompt
   try{r.start()}catch(e){rec=null;voiceFail('start')}
 }
 function voiceFail(err){
-  if(err==='not-allowed'||err==='service-not-allowed'||err==='audio-capture')voiceBlocked=true;
-  if(!editing){toast(VERR[err]||'沒有聽到聲音，請改用打字');return}
-  showVB('fail',VERR[err]||'沒有聽到聲音，請直接打字');manualInput();
+  if(err==='not-allowed'||err==='service-not-allowed')voiceBlocked=true;
+  const msg=(VERR[err]||'沒有聽到聲音，請直接打字')+(err&&err!=='no-speech'?`（${err}）`:'');
+  if(!editing){toast(msg);return}
+  showVB('fail',msg);manualInput();
+  if(voiceBlocked&&!LS.get('mm.micHelpShown',false)){LS.set('mm.micHelpShown',true);setTimeout(showMicHelp,600)}
+}
+function showMicHelp(){
+  dialog({title:'開啟麥克風權限',body:`<p>手機沒有允許心智圖使用麥克風，所以先改用打字。開啟方式：</p>
+<ol><li><b>用 Chrome 開啟網址時</b>：點網址列左邊的 <b>⚙／鎖頭</b> 圖示 →「權限」→ <b>麥克風</b> 改成「允許」。</li>
+<li><b>已安裝的 App（APK 或加到主畫面）</b>：手機「設定」→「應用程式」→ <b>Chrome</b> →「權限」→ <b>麥克風</b>「僅在使用時允許」。再打開 Chrome →「設定」→「網站設定」→「麥克風」，確認 <code>chahan1.github.io</code> 沒有被封鎖。</li>
+<li>改好後<b>關掉 App 再重新開啟</b>。</li></ol>
+<p class="muted">可以用 ⋮ →「語音測試」確認是否已經能用。語音辨識也需要手機已安裝並啟用「Google」App（語音服務）。</p>`,buttons:[{label:'知道了',cls:'primary'}]});
 }
 function manualInput(){stopVoice();if(editing){ed.focus();ed.select()}}
 ['pointerdown','mousedown'].forEach(t=>vb.addEventListener(t,e=>e.preventDefault()));
@@ -862,7 +883,7 @@ vb.addEventListener('click',e=>{
   const b=e.target.closest('[data-vb]');if(!b)return;const a=b.dataset.vb;
   if(a==='ok')finishEdit();
   else if(a==='type'){hideVB();manualInput()}
-  else if(a==='again'){if(editing){startVoiceTopic()}}
+  else if(a==='again'){if(editing){voiceBlocked=false;startVoiceTopic()}}
   else if(a==='lang'){voiceLang=voiceLang==='zh-TW'?'en-US':'zh-TW';LS.set('mm.voiceLang',voiceLang);toast('語音語言：'+(voiceLang==='zh-TW'?'中文':'English'));if(editing&&rec)startVoiceTopic();else if(npRec)startVoiceNote();else showVB(vb.dataset.state)}
 });
 ed.addEventListener('input',()=>{
@@ -874,24 +895,26 @@ ed.addEventListener('input',()=>{
 let npRec=false;
 function startVoiceNote(){
   stopVoice();npRec=false;
-  if(!SR||window.claude||voiceBlocked){toast(window.claude?'這裡不能使用語音輸入，請用打字':!SR?'這個瀏覽器不支援語音輸入，請用打字（建議用 Chrome）':'沒有麥克風權限，請用打字');npText.focus();return}
+  voiceBlocked=false;
+  if(!SR||window.claude){toast(window.claude?'這裡不能使用語音輸入，請用打字':!SR?'這個瀏覽器不支援語音輸入，請用打字（建議用 Chrome）':'沒有麥克風權限，請用打字');npText.focus();return}
   let r;try{r=new SR()}catch(e){toast('無法啟動語音辨識，請用打字');npText.focus();return}
-  r.lang=voiceLang;r.interimResults=false;r.continuous=true;
+  r.lang=voiceLang;r.interimResults=false;r.continuous=!isAndroid;
   rec=r;recState={mode:'note',got:false,err:null};npRec=true;$('#npMic').classList.add('on');
-  toast('🎤 請說出註記內容，說完再按一次麥克風');
+  toast(isAndroid?'🎤 請說出註記內容（說完會自動停止，可以再按一次繼續）':'🎤 請說出註記內容，說完再按一次麥克風');
   r.onresult=e=>{
     if(rec!==r)return;let add='';
-    for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)add+=e.results[i][0].transcript;
+    if(isAndroid){const last=e.results[e.results.length-1];if(last.isFinal)add=last[0].transcript}
+    else for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)add+=e.results[i][0].transcript;
     add=add.trim();if(!add)return;recState.got=true;
     const v=npText.value;npText.value=v+(v&&!/\s$/.test(v)?(voiceLang==='zh-TW'?'':' '):'')+add;
     npText.dispatchEvent(new Event('input'));
   };
-  r.onerror=e=>{if(rec===r)recState.err=e.error};
+  r.onerror=e=>{if(rec===r&&e.error!=='aborted')recState.err=e.error};
   r.onend=()=>{
-    if(rec!==r)return;rec=null;npRec=false;$('#npMic').classList.remove('on');
+    if(rec!==r)return;rec=null;npRec=false;lastStop=Date.now();$('#npMic').classList.remove('on');
     const err=recState.err;
-    if(err==='not-allowed'||err==='service-not-allowed'||err==='audio-capture')voiceBlocked=true;
-    if(!recState.got){toast(VERR[err]||'沒有聽到聲音，請改用打字');npText.focus()}
+    if(err==='not-allowed'||err==='service-not-allowed'){voiceBlocked=true;if(!LS.get('mm.micHelpShown',false)){LS.set('mm.micHelpShown',true);setTimeout(showMicHelp,400)}}
+    if(!recState.got){toast((VERR[err]||'沒有聽到聲音，請改用打字')+(err&&err!=='no-speech'?`（${err}）`:''));npText.focus()}
   };
   try{r.start()}catch(e){rec=null;npRec=false;$('#npMic').classList.remove('on');toast('無法啟動語音辨識，請用打字');npText.focus()}
 }
@@ -981,7 +1004,7 @@ $('#colorpop').addEventListener('click',e=>{const b=e.target.closest('[data-c]')
 
 const MENU=()=>[
   ['theme','🎨','顏色主題…'],['sync','☁️','同步設定…'],'-',
-  ['voice',voiceOn?'🎤':'⌨️',voiceOn?'語音輸入：開（新增／修改時先聽）':'語音輸入：關（直接打字）'],['vlang','🌐','語音語言：'+(voiceLang==='zh-TW'?'中文':'English')],'-',
+  ['voice',voiceOn?'🎤':'⌨️',voiceOn?'語音輸入：開（新增／修改時先聽）':'語音輸入：關（直接打字）'],['vlang','🌐','語音語言：'+(voiceLang==='zh-TW'?'中文':'English')],['vtest','🩺','語音測試（檢查麥克風）'],'-',
   ['review','🗂️','回顧清單（時間與註記）'],['time',showTime?'🙈':'🕒',showTime?'隱藏建立時間':'在主題下方顯示建立時間'],'-',
   ['png','🖼️','匯出圖片 (PNG)'],['outline','📋','複製大綱文字'],['import','📥','匯入大綱文字／檔案'],['backup','💾','備份（全部心智圖）'],'-',
   ['layout',map.layout==='right'?'↔️':'➡️',map.layout==='right'?'版面：改為左右平衡':'版面：改為全部向右'],
@@ -995,6 +1018,7 @@ function openMenu(){
 $('#bMore').onclick=openMenu;
 $('#menu').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;closeMenus();const k=b.dataset.m;
   ({voice:()=>{voiceOn=!voiceOn;voiceBlocked=false;LS.set('mm.voice',voiceOn);toast(voiceOn?(SR&&!window.claude?'已開啟語音輸入':'已開啟，但這裡不支援語音，會自動改用打字'):'已關閉語音輸入，改用打字')},
+    vtest:showVoiceTest,
     vlang:()=>{voiceLang=voiceLang==='zh-TW'?'en-US':'zh-TW';LS.set('mm.voiceLang',voiceLang);toast('語音語言：'+(voiceLang==='zh-TW'?'中文':'English'))},
     theme:showTheme,sync:showSync,review:showReview,time:()=>{showTime=!showTime;LS.set('mm.showTime',showTime);render()},png:exportPNG,outline:showOutline,import:showImport,backup:showBackup,help:showHelp,about:showAbout,
     layout:()=>mutate(()=>{if(map.layout==='right'){map.layout='both';balanceSides(map.root)}else map.layout='right'}),
@@ -1082,7 +1106,7 @@ function showHelp(){
 <tr><td>註記</td><td>按下方「註記」或主題角落的黃色圖示，寫下想法、回饋；會記錄建立與修改時間</td></tr>
 <tr><td>回顧</td><td>右上 ⋮ →「回顧清單」：依時間列出所有主題與註記，點一下跳到該主題；也可以在主題下方顯示建立時間</td></tr>
 <tr><td>修改文字</td><td>點兩下主題，或按「編輯」／<kbd>F2</kbd>；<kbd>Enter</kbd> 完成、<kbd>Shift</kbd>+<kbd>Enter</kbd> 換行</td></tr>
-<tr><td>語音輸入</td><td>新增或修改主題時會先開始聽（編輯框變紅色），直接說出內容即可；沒聽到聲音、沒有麥克風權限或沒網路時，會自動改成打字。也可以隨時按「⌨️ 打字」或直接按鍵盤打字。註記面板的 🎤 可以用說的寫註記。⋮ 選單可以關閉語音、切換中文／English</td></tr>
+<tr><td>語音輸入</td><td>語音不能用時，先用 ⋮ →「語音測試」檢查原因。新增或修改主題時會先開始聽（編輯框變紅色），直接說出內容即可；沒聽到聲音、沒有麥克風權限或沒網路時，會自動改成打字。也可以隨時按「⌨️ 打字」或直接按鍵盤打字。註記面板的 🎤 可以用說的寫註記。⋮ 選單可以關閉語音、切換中文／English</td></tr>
 <tr><td>摺疊／展開</td><td>按主題外側的小圓鈕：「−」摺疊分支，摺疊後顯示子主題數量，再按一下展開；鍵盤 <kbd>/</kbd></td></tr>
 <tr><td>搬移主題</td><td>按住主題拖到另一個主題上；拖到中心主題的左邊或右邊可換邊</td></tr>
 <tr><td>顏色主題</td><td>右上角調色盤：26 種配色，可選立體或平面樣式，可選依層級或依分支上色</td></tr>
@@ -1299,6 +1323,41 @@ function showReview(){
   w.addEventListener('change',e=>{if(e.target.type==='checkbox'){only=e.target.checked;draw()}});
   ov=dialog({title:'回顧清單：'+(oneLine(map.root.text)||'心智圖'),body:w,buttons:[{label:'複製成文字',onClick:()=>{
     copyText(rows().map(x=>`${fmtFull(x.n.created)}\t${[...x.path,oneLine(x.n.text)].join(' › ')}${x.n.note?'\n    註記：'+x.n.note.replace(/\n/g,'\n          '):''}`).join('\n'));return false}},{label:'關閉',cls:'primary'}]});
+}
+
+/* ---------- voice test (diagnostics) ---------- */
+async function showVoiceTest(){
+  const w=document.createElement('div');
+  const ua=navigator.userAgent,chrome=(ua.match(/(?:Chrome|CriOS)\/(\d+)/)||[])[1],andv=(ua.match(/Android\s([\d.]+)/)||[])[1];
+  let perm='無法查詢';try{const p=await navigator.permissions.query({name:'microphone'});perm={granted:'✅ 已允許',denied:'❌ 已封鎖',prompt:'❔ 尚未詢問'}[p.state]||p.state}catch(e){}
+  const mode=window.matchMedia('(display-mode: standalone)').matches?'已安裝的 App':document.referrer.startsWith('android-app://')?'Android App（APK）':'瀏覽器分頁';
+  const info=[['版本',VERSION],['裝置',andv?'Android '+andv:/iPhone|iPad/.test(ua)?'iPhone／iPad':'電腦'],['瀏覽器',chrome?'Chrome '+chrome:(ua.match(/(Safari|Firefox|SamsungBrowser)\/[\d.]+/)||['其他'])[0]],
+    ['開啟方式',window.claude?'claude.ai（不能用麥克風）':mode],['安全連線',window.isSecureContext?'✅ 是':'❌ 否（需要 https）'],['語音辨識',SR?'✅ 支援':'❌ 不支援'],
+    ['麥克風權限',perm],['網路',navigator.onLine?'✅ 已連線':'❌ 離線'],['語音語言',voiceLang==='zh-TW'?'中文':'English'],['語音輸入設定',voiceOn?'開':'關']];
+  w.innerHTML=`<table class="keys">${info.map(([k,v])=>`<tr><td>${k}</td><td>${esc(v)}</td></tr>`).join('')}</table>
+<p style="margin-top:12px"><b>測試結果：</b><span id="vtRes" class="muted">按「開始測試」，聽到嗶聲後說一句話</span></p>
+<textarea id="vtLog" rows="5" readonly style="font-family:ui-monospace,monospace;font-size:12px"></textarea>`;
+  const log=t=>{const l=w.querySelector('#vtLog');l.value+=(l.value?'\n':'')+new Date().toLocaleTimeString('zh-TW',{hour12:false})+'  '+t;l.scrollTop=1e9};
+  info.forEach(([k,v])=>log(k+'：'+v));
+  let tr=null;
+  const run=()=>{
+    const res=w.querySelector('#vtRes');
+    if(!SR){res.textContent='❌ 這個瀏覽器不支援語音辨識，請改用 Chrome';return false}
+    if(window.claude){res.textContent='❌ claude.ai 版不能用麥克風，請用 GitHub 上的 App';return false}
+    stopVoice();try{tr&&tr.abort()}catch(e){}
+    const r=new SR();tr=r;r.lang=voiceLang;r.interimResults=!isAndroid;r.continuous=false;let got='',err='';
+    ['start','audiostart','soundstart','speechstart','speechend','audioend'].forEach(ev=>r.addEventListener(ev,()=>log('事件：'+ev)));
+    r.onresult=e=>{const last=e.results[e.results.length-1];got=last[0].transcript;log('結果：'+got+(last.isFinal?'（最終）':'（暫時）'));res.textContent='🎤 '+got};
+    r.onerror=e=>{err=e.error;log('錯誤：'+e.error+(e.message?' '+e.message:''))};
+    r.onend=()=>{log('事件：end');res.textContent=got?`✅ 語音可以使用：「${cleanSpeech(got)}」`:`❌ 失敗：${(VERR[err]||'沒有聽到聲音')}${err?'（'+err+'）':''}`;
+      if(err==='not-allowed'||err==='service-not-allowed')showMicHelp();else if(got)voiceBlocked=false};
+    res.textContent='🔴 聆聽中…請說話';log('開始測試（'+r.lang+(r.interimResults?'，即時結果':'，最終結果')+'）');
+    try{r.start()}catch(e){log('無法啟動：'+e.message);res.textContent='❌ 無法啟動語音辨識'}
+    return false;
+  };
+  dialog({title:'語音測試',body:w,onClose:()=>{try{tr&&tr.abort()}catch(e){}},buttons:[
+    {label:'複製結果',onClick:()=>{copyText(w.querySelector('#vtLog').value+'\nUA：'+ua);return false}},
+    {label:'關閉'},{label:'開始測試',cls:'primary',onClick:run}]});
 }
 
 /* ---------- version / about ---------- */
