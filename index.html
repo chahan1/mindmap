@@ -104,7 +104,8 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 .thc.on{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 .thp{display:flex;align-items:center;gap:4px}
 .thp i{width:26px;height:16px;border-radius:6px;display:block}
-.thp b{width:13px;height:13px;border-radius:50%;display:block}
+.thp b{width:13px;height:13px;border-radius:50%;display:block;box-shadow:inset 0 -2px 0 rgba(0,0,0,.22),inset 0 2px 1px rgba(255,255,255,.35),0 1px 2px rgba(0,0,0,.25)}
+.thp i{box-shadow:inset 0 -2px 0 rgba(0,0,0,.3),inset 0 2px 1px rgba(255,255,255,.25),0 1px 3px rgba(0,0,0,.25)}
 #ghost{position:fixed;z-index:50;pointer-events:none;background:var(--accent);color:#fff;padding:7px 13px;border-radius:12px;font-size:14px;display:none;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.94;box-shadow:var(--shadow)}
 #toast{position:fixed;left:50%;top:calc(68px + env(safe-area-inset-top));transform:translateX(-50%) translateY(-6px);background:#1f2937;color:#fff;padding:10px 14px 10px 16px;border-radius:14px;font-size:14px;z-index:70;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;max-width:92vw;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
 #toast.show{opacity:.97;transform:translateX(-50%)}
@@ -171,31 +172,43 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;paddi
 
 <script>
 'use strict';
-const VERSION='v1.5.0';
+const VERSION='v1.6.0';
 const $=s=>document.querySelector(s);
 const FONT='-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
 
 /* ---------- color themes ---------- */
 const THEMES={
-  vivid:  {name:'繽紛', root:'#312e81',levels:['#2563eb','#10b981','#f97316','#a855f7','#06b6d4','#ec4899'],branch:['#f43f5e','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899']},
-  rainbow:{name:'彩虹', root:'#111827',levels:['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6'],branch:['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899']},
-  neon:   {name:'霓虹', root:'#0f0f23',levels:['#ff007f','#00b8ff','#00d26a','#ffab00','#d500f9','#ff3d00']},
-  galaxy: {name:'星空', root:'#1e1b4b',levels:['#6366f1','#a855f7','#ec4899','#06b6d4','#8b5cf6','#3b82f6']},
-  ocean:  {name:'海洋', root:'#075985',levels:['#0284c7','#06b6d4','#14b8a6','#6366f1','#3b82f6','#0ea5e9']},
-  tropical:{name:'熱帶',root:'#0f766e',levels:['#14b8a6','#f97316','#facc15','#ec4899','#22c55e','#06b6d4']},
-  mint:   {name:'薄荷', root:'#065f46',levels:['#10b981','#06b6d4','#22c55e','#0ea5e9','#14b8a6','#84cc16']},
-  forest: {name:'森林', root:'#14532d',levels:['#16a34a','#84cc16','#f59e0b','#0d9488','#65a30d','#ea580c']},
-  sunset: {name:'夕陽', root:'#9a3412',levels:['#f97316','#f43f5e','#f59e0b','#d946ef','#ef4444','#fb923c']},
-  autumn: {name:'秋楓', root:'#7c2d12',levels:['#dc2626','#ea580c','#d97706','#be123c','#ca8a04','#b45309']},
-  berry:  {name:'莓果', root:'#701a75',levels:['#c026d3','#e11d48','#7c3aed','#db2777','#9333ea','#f43f5e']},
-  candy:  {name:'糖果', root:'#db2777',levels:['#f472b6','#a78bfa','#60a5fa','#34d399','#fbbf24','#fb7185']},
-  morandi:{name:'莫蘭迪',root:'#57534e',levels:['#6f9a7a','#c08672','#6f87b5','#b8995a','#9a78a8','#5f9f9b']},
-  mono:   {name:'簡約', root:'#111827',levels:['#374151','#6b7280','#4b5563','#9ca3af','#1f2937','#6b7280']}
+  vivid:   {name:'繽紛', root:'#312e81',levels:['#2563eb','#10b981','#f97316','#a855f7','#06b6d4','#ec4899'],branch:['#f43f5e','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899']},
+  rainbow: {name:'彩虹', root:'#111827',levels:['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6'],branch:['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899']},
+  pop:     {name:'普普', root:'#111111',levels:['#ff006e','#3a86ff','#ffbe0b','#8338ec','#fb5607','#06d6a0']},
+  neon:    {name:'霓虹', root:'#0f0f23',levels:['#ff007f','#00b8ff','#00d26a','#ffab00','#d500f9','#ff3d00']},
+  electric:{name:'電光', root:'#0b1026',levels:['#0066ff','#00c2ff','#7c3aed','#ff2e93','#00d68f','#ffb800']},
+  aurora:  {name:'極光', root:'#0b132b',levels:['#00c9b7','#00a6f4','#9b5de5','#f15bb5','#f9c80e','#06d6a0']},
+  galaxy:  {name:'星空', root:'#1e1b4b',levels:['#6366f1','#a855f7','#ec4899','#06b6d4','#8b5cf6','#3b82f6']},
+  grape:   {name:'葡萄', root:'#3b0764',levels:['#7209b7','#b5179e','#4361ee','#f72585','#560bad','#9d4edd']},
+  royal:   {name:'皇家', root:'#1e1b4b',levels:['#1d4ed8','#7c3aed','#c026d3','#0891b2','#be123c','#ca8a04']},
+  ocean:   {name:'海洋', root:'#075985',levels:['#0284c7','#06b6d4','#14b8a6','#6366f1','#3b82f6','#0ea5e9']},
+  lagoon:  {name:'湖水', root:'#083344',levels:['#00b4d8','#0077b6','#00c896','#3a86ff','#06d6a0','#118ab2']},
+  tropical:{name:'熱帶', root:'#0f766e',levels:['#14b8a6','#f97316','#facc15','#ec4899','#22c55e','#06b6d4']},
+  mint:    {name:'薄荷', root:'#065f46',levels:['#10b981','#06b6d4','#22c55e','#0ea5e9','#14b8a6','#84cc16']},
+  emerald: {name:'翡翠', root:'#022c22',levels:['#059669','#0891b2','#65a30d','#10b981','#0d9488','#047857']},
+  forest:  {name:'森林', root:'#14532d',levels:['#16a34a','#84cc16','#f59e0b','#0d9488','#65a30d','#ea580c']},
+  citrus:  {name:'柑橘', root:'#7c2d12',levels:['#ff7a00','#ffc400','#7ed321','#ff3d57','#00b894','#ff9f1c']},
+  sunset:  {name:'夕陽', root:'#9a3412',levels:['#f97316','#f43f5e','#f59e0b','#d946ef','#ef4444','#fb923c']},
+  lava:    {name:'熔岩', root:'#1c0a00',levels:['#e60000','#ff5400','#ff8500','#c1121f','#ffb700','#e85d04']},
+  autumn:  {name:'秋楓', root:'#7c2d12',levels:['#dc2626','#ea580c','#d97706','#be123c','#ca8a04','#b45309']},
+  flamingo:{name:'紅鶴', root:'#831843',levels:['#ff4d8d','#f72585','#ff6b6b','#c9184a','#ff8fab','#e5383b']},
+  sakura:  {name:'櫻花', root:'#9d174d',levels:['#ec4899','#a855f7','#f472b6','#fb7185','#d946ef','#f43f5e']},
+  berry:   {name:'莓果', root:'#701a75',levels:['#c026d3','#e11d48','#7c3aed','#db2777','#9333ea','#f43f5e']},
+  candy:   {name:'糖果', root:'#db2777',levels:['#f472b6','#a78bfa','#60a5fa','#34d399','#fbbf24','#fb7185']},
+  retro:   {name:'復古', root:'#264653',levels:['#e76f51','#2a9d8f','#e9c46a','#f4a261','#457b9d','#e63946']},
+  morandi: {name:'莫蘭迪',root:'#57534e',levels:['#6f9a7a','#c08672','#6f87b5','#b8995a','#9a78a8','#5f9f9b']},
+  mono:    {name:'簡約', root:'#111827',levels:['#374151','#6b7280','#4b5563','#9ca3af','#1f2937','#6b7280']}
 };
 const PALETTE=['#e8590c','#1971c2','#2f9e44','#9c36b5','#e03131','#0c8599','#f08c00','#c2255c'];
 const UI={
-  light:{fg:'#1f2937',nodeFill:'#ffffff',sel:'#2563eb',tint:.14,muted:'#8b95a5',shadow:.13,rootStroke:'none'},
-  dark:{fg:'#e5e7eb',nodeFill:'#1a1f26',sel:'#60a5fa',tint:.24,muted:'#7c8796',shadow:.55,rootStroke:'rgba(255,255,255,.22)'}
+  light:{fg:'#1f2937',nodeFill:'#ffffff',sel:'#2563eb',tint:.14,muted:'#8b95a5',shadow:.13,sh3:.24,rootStroke:'none'},
+  dark:{fg:'#e5e7eb',nodeFill:'#1a1f26',sel:'#60a5fa',tint:.24,muted:'#7c8796',shadow:.55,sh3:.7,rootStroke:'rgba(255,255,255,.22)'}
 };
 const mq=matchMedia('(prefers-color-scheme: dark)');
 const ui=()=>mq.matches?UI.dark:UI.light;
@@ -538,7 +551,8 @@ function wrap(text,s){
   }
   return out;
 }
-let showTime=!!LS.get('mm.showTime',false);
+let showTime=!!LS.get('mm.showTime',false),flat=!!LS.get('mm.flat',false);
+const depth3=n=>n._depth===0?6:n._depth===1?5:3.5;
 const gapY=d=>(d<=1?30:14)+(showTime?14:0);
 const cmode=()=>map.colorMode==='branch'?'branch':'level';
 const sideOf=c=>map.layout==='right'||c.side!=='l'?'r':'l';
@@ -576,7 +590,7 @@ function bounds(){
   for(const n of visible()){
     const extra=n.collapsed&&n.children.length?26:0;
     x0=Math.min(x0,n._x-n._w/2-(n._dir<0?extra:0));x1=Math.max(x1,n._x+n._w/2+(n._dir>0?extra:0));
-    y0=Math.min(y0,n._y-n._h/2-(n.note?6:0));y1=Math.max(y1,n._y+n._h/2+(showTime?16:0));
+    y0=Math.min(y0,n._y-n._h/2-(n.note?6:0));y1=Math.max(y1,n._y+n._h/2+(showTime?16:0)+(flat?0:depth3(n)+8));
   }
   return {x:x0,y:y0,w:x1-x0,h:y1-y0};
 }
@@ -587,7 +601,15 @@ function drawSVG(U,exp){
   const defs=`<defs><filter id="sh" x="-20%" y="-30%" width="140%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="3.2" flood-color="#0f172a" flood-opacity="${U.shadow}"/></filter>
 <filter id="sh2" x="-20%" y="-40%" width="140%" height="200%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="${rootFill}" flood-opacity=".35"/></filter>
 ${[...new Set(vis.filter(n=>n._depth===1).map(n=>n._col))].map(c=>`<linearGradient id="lg${c.slice(1)}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(c,'#ffffff',.16)}"/><stop offset="1" stop-color="${c}"/></linearGradient>`).join('')}
-<linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(rootFill,'#ffffff',.18)}"/><stop offset="1" stop-color="${rootFill}"/></linearGradient></defs>`;
+<linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${mix(rootFill,'#ffffff',.18)}"/><stop offset="1" stop-color="${rootFill}"/></linearGradient>
+${flat?'':`<filter id="s3a" x="-25%" y="-40%" width="150%" height="220%"><feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#0f172a" flood-opacity="${U.sh3}"/></filter>
+<filter id="s3b" x="-25%" y="-40%" width="150%" height="220%"><feDropShadow dx="0" dy="5" stdDeviation="4.5" flood-color="#0f172a" flood-opacity="${U.sh3}"/></filter>
+<filter id="s3c" x="-25%" y="-40%" width="150%" height="220%"><feDropShadow dx="0" dy="3.5" stdDeviation="3" flood-color="#0f172a" flood-opacity="${U.sh3*.8}"/></filter>
+<filter id="ts" x="-10%" y="-30%" width="120%" height="160%"><feDropShadow dx="0" dy="1" stdDeviation=".7" flood-color="#000" flood-opacity=".35"/></filter>
+<linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<linearGradient id="rg3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(rootFill,'#ffffff',.28)}"/><stop offset=".55" stop-color="${rootFill}"/><stop offset="1" stop-color="${mix(rootFill,'#000000',.12)}"/></linearGradient>
+${[...new Set(vis.filter(n=>n._depth===1).map(n=>n._col))].map(c=>`<linearGradient id="l3${c.slice(1)}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(c,'#ffffff',.3)}"/><stop offset=".55" stop-color="${c}"/><stop offset="1" stop-color="${mix(c,'#000000',.1)}"/></linearGradient>`).join('')}
+${[...new Set(vis.filter(n=>n._depth>1).map(n=>n._col))].map(c=>`<linearGradient id="d3${c.slice(1)}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${mix(c,U.nodeFill,.94)}"/><stop offset="1" stop-color="${mix(c,U.nodeFill,.72)}"/></linearGradient>`).join('')}`}</defs>`;
   for(const n of vis){
     if(n===R)continue;
     const p=parentOf[n.id],d=n._dir,y1=p._y,x2=n._x-d*n._w/2,y2=n._y;
@@ -603,9 +625,24 @@ ${[...new Set(vis.filter(n=>n._depth===1).map(n=>n._col))].map(c=>`<linearGradie
     const s=st(n._depth),x0=n._x-n._w/2,y0=n._y-n._h/2;
     let g=`<g class="node" data-id="${n.id}">`,rx,tc;
     if(n===R)rx=18;else if(n._depth===1)rx=n._h/2;else rx=11;
-    if(!exp&&n.id===sel)g+=`<rect x="${x0-5}" y="${y0-5}" width="${n._w+10}" height="${n._h+10}" rx="${rx+5}" fill="${U.sel}" fill-opacity=".1" stroke="${U.sel}" stroke-width="2.5"/>`;
-    if(!exp&&n.id===dropId)g+=`<rect x="${x0-7}" y="${y0-7}" width="${n._w+14}" height="${n._h+14}" rx="${rx+7}" fill="${U.sel}" fill-opacity=".14" stroke="${U.sel}" stroke-width="2" stroke-dasharray="6 4"/>`;
-    if(n===R){
+    const D=flat?0:depth3(n);
+    if(!exp&&n.id===sel)g+=`<rect x="${x0-5}" y="${y0-5}" width="${n._w+10}" height="${n._h+10+D}" rx="${rx+5}" fill="${U.sel}" fill-opacity=".1" stroke="${U.sel}" stroke-width="2.5"/>`;
+    if(!exp&&n.id===dropId)g+=`<rect x="${x0-7}" y="${y0-7}" width="${n._w+14}" height="${n._h+14+D}" rx="${rx+7}" fill="${U.sel}" fill-opacity=".14" stroke="${U.sel}" stroke-width="2" stroke-dasharray="6 4"/>`;
+    let tf='';
+    if(!flat){
+      const base=n===R?rootFill:n._col,gl=Math.min(n._h*.42,26),glr=Math.max(2,Math.min(rx-3,gl/2));
+      if(n===R||n._depth===1){
+        tc=textOn(base);if(tc==='#ffffff')tf=' filter="url(#ts)"';
+        g+=`<rect x="${x0}" y="${y0+D}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${mix(base,'#000000',.38)}" filter="url(#${n===R?'s3a':'s3b'})"/>`;
+        g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="url(#${n===R?'rg3':'l3'+base.slice(1)})"${n===R&&U.rootStroke!=='none'?` stroke="${U.rootStroke}" stroke-width="1.5"`:''}/>`;
+        g+=`<rect x="${x0+4}" y="${y0+2.5}" width="${n._w-8}" height="${gl}" rx="${glr}" fill="url(#gloss)"/>`;
+      }else{
+        tc=U.fg;
+        g+=`<rect x="${x0}" y="${y0+D}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${mix(base,'#000000',.18)}" filter="url(#s3c)"/>`;
+        g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="url(#d3${base.slice(1)})" stroke="${base}" stroke-width="2"/>`;
+        g+=`<rect x="${x0+3}" y="${y0+2}" width="${n._w-6}" height="${gl*.8}" rx="${glr}" fill="url(#gloss)" opacity=".8"/>`;
+      }
+    }else if(n===R){
       tc=textOn(rootFill);
       g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="url(#rg)" stroke="${U.rootStroke}" stroke-width="1.5" filter="url(#sh2)"/>`;
     }else if(n._depth===1){
@@ -617,9 +654,9 @@ ${[...new Set(vis.filter(n=>n._depth===1).map(n=>n._col))].map(c=>`<linearGradie
       g+=`<rect x="${x0}" y="${y0}" width="${n._w}" height="${n._h}" rx="${rx}" fill="${n._col}" fill-opacity="${U.tint}"/>`;
     }
     const lh=s.fs*1.32,top=n._y-(n._lines.length-1)*lh/2+s.fs*0.36;
-    g+=`<text font-family='${FONT}' font-size="${s.fs}" font-weight="${s.fw}" fill="${tc}" text-anchor="middle">`+
+    g+=`<text font-family='${FONT}' font-size="${s.fs}" font-weight="${s.fw}" fill="${tc}" text-anchor="middle"${tf}>`+
       n._lines.map((l,i)=>`<tspan x="${n._x}" y="${top+i*lh}">${esc(l)}</tspan>`).join('')+'</text></g>';
-    if(showTime&&n.created)g+=`<text x="${n._x}" y="${n._y+n._h/2+13}" font-family='${FONT}' font-size="10.5" fill="${U.muted}" text-anchor="middle">${fmtShort(n.created)}</text>`;
+    if(showTime&&n.created)g+=`<text x="${n._x}" y="${n._y+n._h/2+13+D}" font-family='${FONT}' font-size="10.5" fill="${U.muted}" text-anchor="middle">${fmtShort(n.created)}</text>`;
     if(n.note){
       const bx=n===R?x0+8:n._x-n._dir*(n._w/2-8),by=y0+1;
       g+=`<g class="node" data-note="${n.id}"><title>${esc(n.note.slice(0,200))}</title><circle cx="${bx}" cy="${by}" r="13" fill="transparent"/><circle cx="${bx}" cy="${by}" r="8" fill="#f59e0b" stroke="${U.nodeFill}" stroke-width="1.6"/><path d="M${bx-3.4},${by-2.3}h6.8M${bx-3.4},${by+.2}h6.8M${bx-3.4},${by+2.7}h4.2" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/></g>`;
@@ -963,13 +1000,15 @@ function confirmDlg(msg,ok,danger){return new Promise(res=>{dialog({title:'確�
 function showTheme(){
   const w=document.createElement('div');
   const draw=()=>{
-    w.innerHTML=`<div class="seg">${[['level','依層級上色'],['branch','依分支上色']].map(([k,l])=>`<button data-cm="${k}" class="${cmode()===k?'on':''}">${l}</button>`).join('')}</div>
+    w.innerHTML=`<div class="seg">${[['3d','立體（有厚度與陰影）'],['flat','平面']].map(([k,l])=>`<button data-st="${k}" class="${(flat?'flat':'3d')===k?'on':''}">${l}</button>`).join('')}</div>
+<div class="seg">${[['level','依層級上色'],['branch','依分支上色']].map(([k,l])=>`<button data-cm="${k}" class="${cmode()===k?'on':''}">${l}</button>`).join('')}</div>
 <div class="themes">${Object.entries(THEMES).map(([k,t])=>`<button class="thc${map.theme===k?' on':''}" data-th="${k}"><span class="thp"><i style="background:${t.root}"></i>${t.levels.slice(0,4).map(c=>`<b style="background:${c}"></b>`).join('')}</span><span>${t.name}</span></button>`).join('')}</div>
-<p class="muted">主題會跟著這張心智圖一起儲存、同步；新的心智圖會沿用最後選的主題。個別主題仍可用「顏色」按鈕單獨換色。</p>`;
+<p class="muted">共 ${Object.keys(THEMES).length} 組配色。主題會跟著這張心智圖一起儲存、同步；新的心智圖會沿用最後選的主題。個別主題仍可用「顏色」按鈕單獨換色。</p>`;
   };
   draw();
   w.addEventListener('click',e=>{
-    const a=e.target.closest('[data-th]'),c=e.target.closest('[data-cm]');
+    const a=e.target.closest('[data-th]'),c=e.target.closest('[data-cm]'),sb=e.target.closest('[data-st]');
+    if(sb){flat=sb.dataset.st==='flat';LS.set('mm.flat',flat);render();draw();return}
     if(a&&a.dataset.th!==map.theme){LS.set('mm.theme',a.dataset.th);mutate(()=>{map.theme=a.dataset.th});draw()}
     if(c&&c.dataset.cm!==cmode()){mutate(()=>{map.colorMode=c.dataset.cm});draw()}
   });
@@ -1022,7 +1061,7 @@ function showHelp(){
 <tr><td>語音輸入</td><td>新增或修改主題時會先開始聽（編輯框變紅色），直接說出內容即可；沒聽到聲音、沒有麥克風權限或沒網路時，會自動改成打字。也可以隨時按「⌨️ 打字」或直接按鍵盤打字。註記面板的 🎤 可以用說的寫註記。⋮ 選單可以關閉語音、切換中文／English</td></tr>
 <tr><td>摺疊／展開</td><td>按主題外側的小圓鈕：「−」摺疊分支，摺疊後顯示子主題數量，再按一下展開；鍵盤 <kbd>/</kbd></td></tr>
 <tr><td>搬移主題</td><td>按住主題拖到另一個主題上；拖到中心主題的左邊或右邊可換邊</td></tr>
-<tr><td>顏色主題</td><td>右上角調色盤：14 種配色，可選依層級或依分支上色</td></tr>
+<tr><td>顏色主題</td><td>右上角調色盤：26 種配色，可選立體或平面樣式，可選依層級或依分支上色</td></tr>
 <tr><td>移動畫面</td><td>拖曳空白處；兩指或滾輪縮放；右下角 ＋／－／置中</td></tr>
 <tr><td>同步</td><td>右上角雲朵。claude.ai 版自動用 Claude 帳號同步；GitHub Pages 版第一次要貼 GitHub 金鑰</td></tr>
 <tr><td>復原／重做</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd>／<kbd>Ctrl</kbd>+<kbd>Y</kbd></td></tr>
