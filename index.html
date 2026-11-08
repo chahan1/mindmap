@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>心智圖</title>
-<script>try{var t=localStorage.getItem("mm.theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<script>try{var t=localStorage.getItem("mm.appearance");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <style>
 /* Hallmark v2.0.0 (condensed) | shape: app screen | screen: the mind map canvas with its top bar and node toolbar | signature: the map itself, levels coloured by the chosen palette | tokens: existing light and dark tokens plus the chrome literals lifted in | type: system sans, one family */
 /* critique: the purple-to-blue logo gradient and emoji menu read as generated; one blue accent, line icons, an appearance switch */
@@ -253,9 +253,10 @@ h1,h2,h3{text-wrap:balance}
         })();
 
 'use strict';
-const VERSION='v1.6.4';
+const VERSION='v1.6.5';
 const VERSION_DATE='2026-11-08';
 const CHANGELOG=[
+  ['v1.6.5','修正「外觀」顯示 undefined（和顏色主題的設定名稱衝突）'],
   ['v1.6.4','介面整理（依 Hallmark 設計檢查）：選單新增「外觀」（跟隨手機／淺色／深色，心智圖顏色也會跟著換）；選單圖示改成線條圖示；標誌和「新增心智圖」改用單一藍色；補上焦點外框與減少動態效果'],
   ['v1.6.3','修正手機點兩下修改主題時，語音輸入沒有啟動'],
   ['v1.6.2','修正 Android 手機語音輸入；新增「語音測試」'],
@@ -1082,10 +1083,10 @@ function openColor(){
 $('#colorpop').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;const n=byId[sel];if(!n)return;
   mutate(()=>{n.color=b.dataset.c||null});closeMenus()});
 
-function appearanceMode(){try{return localStorage.getItem('mm.theme')||'auto'}catch(e){return 'auto'}}
+function appearanceMode(){try{const v=localStorage.getItem('mm.appearance');return v==='light'||v==='dark'?v:'auto'}catch(e){return 'auto'}}
 function cycleAppearance(){
   const next={auto:'light',light:'dark',dark:'auto'}[appearanceMode()];
-  try{next==='auto'?localStorage.removeItem('mm.theme'):localStorage.setItem('mm.theme',next)}catch(e){}
+  try{next==='auto'?localStorage.removeItem('mm.appearance'):localStorage.setItem('mm.appearance',next)}catch(e){}
   if(next==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',next);
   render();toast('外觀：'+({auto:'跟隨手機',light:'淺色',dark:'深色'})[next]);
 }
